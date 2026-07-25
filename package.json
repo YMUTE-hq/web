@@ -9,9 +9,17 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@novu/api": "^3.17.0",
+    "@novu/react": "^3.17.0",
+    "@supabase/ssr": "^0.9.0",
+    "@supabase/supabase-js": "^2.99.1",
+    "cloudinary": "^2.9.0",
+    "framer-motion": "^12.37.0",
+    "lucide-react": "^0.577.0",
     "next": "16.1.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "resend": "^6.9.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

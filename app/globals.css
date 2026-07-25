@@ -1,26 +1,187 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200");
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #c8a137;
+  --color-navy-deep: #001f3f;
+  --color-navy-muted: #1f3a5f;
+  --color-background-light: #fdfcf0;
+  --color-background-dark: #1f1c13;
+  --color-secondary-blue: #1f3a5f;
+  --color-clay-shadow: rgba(200, 161, 55, 0.15);
+  
+  --font-display: "Inter", sans-serif;
+  
+  --shadow-clay: inset 4px 4px 8px rgba(255,255,255,0.4), inset -4px -4px 8px rgba(0,0,0,0.05), 8px 8px 16px rgba(0,0,0,0.1);
+  --shadow-clay-hover: inset 6px 6px 12px rgba(255,255,255,0.5), inset -6px -6px 12px rgba(0,0,0,0.08), 12px 12px 24px rgba(0,0,0,0.12);
+  --shadow-clay-inner: inset 4px 4px 12px rgba(0,0,0,0.05), inset -4px -4px 12px rgba(255,255,255,0.5);
+  --shadow-clay-primary: 8px 8px 16px 0 rgba(200, 161, 55, 0.2), inset -4px -4px 8px 0 rgba(0, 0, 0, 0.1), inset 4px 4px 8px 0 rgba(255, 255, 255, 0.3);
+  --shadow-clay-btn: 8px 8px 16px 0 rgba(200, 161, 55, 0.3), inset -4px -4px 8px 0 rgba(0, 0, 0, 0.1), inset 4px 4px 8px 0 rgba(255, 255, 255, 0.3);
+  --shadow-clay-card: 12px 12px 24px #e0dfda, -12px -12px 24px #ffffff;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --primary: #c8a137;
+  --navy-deep: #001f3f;
+  --navy-muted: #1f3a5f;
+  --bg-light: #fdfcf0;
+  --bg-dark: #1f1c13;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Inter", sans-serif;
+  background: var(--bg-light);
+  color: var(--navy-deep);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Clay Design System ─── */
+.clay-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow:
+    inset 4px 4px 8px rgba(255, 255, 255, 0.4),
+    inset -4px -4px 8px rgba(0, 0, 0, 0.05),
+    8px 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+.clay-card-solid {
+  background: #ffffff;
+  border-radius: 1.5rem;
+  box-shadow: 12px 12px 24px #e0dfda, -12px -12px 24px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.clay-btn-primary {
+  background: #c8a137;
+  box-shadow:
+    inset 3px 3px 6px rgba(255, 255, 255, 0.3),
+    inset -3px -3px 6px rgba(0, 0, 0, 0.2),
+    0 4px 10px rgba(200, 161, 55, 0.3);
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.clay-btn-primary:hover {
+  box-shadow:
+    inset 3px 3px 6px rgba(255, 255, 255, 0.4),
+    inset -3px -3px 6px rgba(0, 0, 0, 0.3),
+    0 6px 14px rgba(200, 161, 55, 0.4);
+  transform: translateY(-1px);
+}
+
+.clay-btn-secondary {
+  background: #fdfcf0;
+  box-shadow:
+    inset 3px 3px 6px rgba(255, 255, 255, 0.8),
+    inset -3px -3px 6px rgba(0, 0, 0, 0.05),
+    0 4px 10px rgba(0, 0, 0, 0.05);
+  color: #001f3f;
+  transition: all 0.2s ease;
+}
+
+.clay-btn-secondary:hover {
+  transform: translateY(-1px);
+}
+
+.clay-input {
+  background: rgba(253, 252, 240, 0.8);
+  border: none;
+  box-shadow:
+    inset 4px 4px 8px #e5e4da,
+    inset -4px -4px 8px #ffffff;
+  transition: all 0.2s ease;
+  outline: none;
+  color: #001f3f;
+}
+
+.clay-input:focus {
+  box-shadow:
+    inset 2px 2px 4px #e5e4da,
+    inset -2px -2px 4px #ffffff,
+    0 0 0 2px rgba(200, 161, 55, 0.4);
+  outline: none !important;
+  ring: none;
+}
+
+.clay-button-primary {
+  background: #c8a137;
+  box-shadow:
+    6px 6px 12px #ad8c30,
+    -6px -6px 12px #ffffff,
+    inset 2px 2px 4px rgba(255, 255, 255, 0.3);
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.clay-button-primary:hover {
+  transform: scale(1.02);
+}
+
+.clay-button-primary:active {
+  transform: scale(0.98);
+}
+
+.clay-button-secondary {
+  background: #f8f7f6;
+  box-shadow: 6px 6px 12px #d9d8d7, -6px -6px 12px #ffffff;
+  color: #1f1c13;
+  transition: all 0.2s ease;
+}
+
+.clay-btn {
+  box-shadow: 4px 4px 8px #d1d1cc, -4px -4px 8px #ffffff;
+  transition: all 0.2s ease;
+}
+
+.clay-btn:active {
+  box-shadow:
+    inset 4px 4px 8px #d1d1cc,
+    inset -4px -4px 8px #ffffff;
+}
+
+.sidebar-item-active {
+  background: #c8a137;
+  color: white;
+  box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ─── Material Symbols ─── */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Utility ─── */
+.fill-1 {
+  font-variation-settings: "FILL" 1;
+}
+
+/* ─── Focus overrides to remove default rings ─── */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  box-shadow:
+    inset 2px 2px 4px #e5e4da,
+    inset -2px -2px 4px #ffffff,
+    0 0 0 2px rgba(200, 161, 55, 0.4);
 }
