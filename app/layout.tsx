@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LoadingProvider } from "@/contexts/LoadingContext";
 import ChatWidget from "@/components/chat/ChatWidget";
+import { Suspense } from "react";
+import LogoLoader from "@/components/ui/LogoLoader";
 
 export const metadata: Metadata = {
   title: "YMUTE – Your Voice Deserves a Stage",
@@ -23,10 +26,14 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <AuthProvider>
-          {children}
-          <ChatWidget />
-        </AuthProvider>
+        <Suspense fallback={<LogoLoader fullScreen size="lg" label="Loading YMUTE..." />}>
+          <LoadingProvider>
+            <AuthProvider>
+              {children}
+              <ChatWidget />
+            </AuthProvider>
+          </LoadingProvider>
+        </Suspense>
       </body>
     </html>
   );

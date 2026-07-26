@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, Loader2 } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 type LogoutButtonProps = {
   variant?: "sidebar-item" | "sidebar-compact" | "navbar" | "danger-pill";
@@ -44,17 +44,8 @@ export default function LogoutButton({
           active:scale-[0.97] transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${className}`}
         title="Sign Out"
       >
-        {isLoggingOut ? (
-          <>
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            {showText && <span>Logging out...</span>}
-          </>
-        ) : (
-          <>
-            <LogOut className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
-            {showText && <span>Logout</span>}
-          </>
-        )}
+        <LogOut className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
+        {showText && <span>{isLoggingOut ? "Signing out..." : "Logout"}</span>}
       </button>
     );
   }
@@ -70,16 +61,11 @@ export default function LogoutButton({
           active:scale-95 transition-all duration-200 cursor-pointer flex items-center justify-center disabled:opacity-60 ${className}`}
         title="Sign Out"
       >
-        {isLoggingOut ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <LogOut className="w-4 h-4" />
-        )}
+        <LogOut className="w-4 h-4" />
       </button>
     );
   }
 
-  // Default: sidebar-item (used inside user profile cards in sidebars)
   return (
     <button
       onClick={handleLogout}
@@ -90,17 +76,8 @@ export default function LogoutButton({
         hover:bg-red-600 hover:text-white hover:border-red-600 hover:shadow-red-500/20 hover:shadow-md hover:scale-[1.02]
         active:scale-[0.98] transition-all duration-200 cursor-pointer disabled:opacity-60 ${className}`}
     >
-      {isLoggingOut ? (
-        <>
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          <span>Signing out...</span>
-        </>
-      ) : (
-        <>
-          <LogOut className="w-3.5 h-3.5" />
-          <span>Sign Out</span>
-        </>
-      )}
+      <LogOut className="w-3.5 h-3.5" />
+      <span>{isLoggingOut ? "Signing out..." : "Sign Out"}</span>
     </button>
   );
 }

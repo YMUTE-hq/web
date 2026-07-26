@@ -9,6 +9,7 @@ import {
 import { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import LogoLoader from "@/components/ui/LogoLoader";
 
 type UserProfile = {
   id: string;
@@ -216,11 +217,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
+      setUser(null);
+      setProfile(null);
       await supabase.auth.signOut();
     } catch (e) {
       console.error("Sign out error", e);
     } finally {
-      window.location.href = "/";
+      window.location.assign("/login");
     }
   };
 

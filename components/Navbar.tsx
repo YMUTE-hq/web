@@ -22,7 +22,7 @@ export default function Navbar() {
         </div>
         <div className="flex items-center gap-3">
           {loading ? (
-            <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+            <div className="w-8 h-8 rounded-full bg-slate-200/60 animate-pulse"></div>
           ) : user ? (
             <>
               <NotificationBell />

@@ -6,6 +6,8 @@ import { ReactNode } from "react";
 import NotificationBell from "@/components/NotificationBell";
 import LogoutButton from "@/components/LogoutButton";
 
+import DashboardTabWrapper from "@/components/DashboardTabWrapper";
+
 export default function CasterDashboardLayout({ children }: { children: ReactNode }) {
   const { profile, loading, signOut } = useAuth();
   const pathname = usePathname();
@@ -21,8 +23,8 @@ export default function CasterDashboardLayout({ children }: { children: ReactNod
 
   return (
     <div className="flex h-screen overflow-hidden bg-background-light font-display">
-      {/* Sidebar */}
-      <aside className="w-72 bg-background-light border-r border-primary/10 flex flex-col p-6 hidden lg:flex">
+      {/* Sidebar - Stays 100% interactive & out of loader blur */}
+      <aside className="w-72 bg-background-light border-r border-primary/10 flex flex-col p-6 hidden lg:flex shrink-0 z-20">
         <Link href="/" className="flex items-center gap-2 mb-8">
           <img src="/logo-icon.svg" alt="Logo" className="w-10 h-10 object-contain" />
           <img src="/logo-text.svg" alt="YMUTE" className="h-5 object-contain" />
@@ -49,7 +51,7 @@ export default function CasterDashboardLayout({ children }: { children: ReactNod
         </div>
         <div className="clay-card p-4 rounded-2xl bg-white/70 border border-primary/10 space-y-3">
           {loading ? (
-            <div className="w-full h-12 rounded-xl border-2 border-primary border-t-transparent animate-spin"></div>
+            <div className="w-full h-12 rounded-xl bg-slate-200/60 animate-pulse"></div>
           ) : (
             <>
               <div className="flex items-center gap-3">
@@ -71,13 +73,15 @@ export default function CasterDashboardLayout({ children }: { children: ReactNod
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Main Content - Content Side Loader Only */}
       <main className="flex-1 overflow-y-auto bg-background-light p-4 md:p-8 flex flex-col">
         <div className="flex justify-end items-center mb-4">
           <NotificationBell />
         </div>
-        <div className="flex-1">
-          {children}
+        <div className="flex-1 flex flex-col">
+          <DashboardTabWrapper>
+            {children}
+          </DashboardTabWrapper>
         </div>
       </main>
     </div>
