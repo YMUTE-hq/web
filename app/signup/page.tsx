@@ -35,8 +35,8 @@ function SignupForm() {
       <div className="flex h-full grow flex-col">
         <header className="flex items-center justify-between px-10 py-6 max-w-7xl mx-auto w-full">
           <Link href="/" className="flex items-center gap-2">
-            <img src="/logo-icon.png" alt="Logo" className="w-10 h-10 object-contain" />
-            <img src="/logo-text.png" alt="YMUTE" className="h-6 object-contain" />
+            <img src="/logo-icon.svg" alt="Logo" className="w-10 h-10 object-contain" />
+            <img src="/logo-text.svg" alt="YMUTE" className="h-6 object-contain" />
           </Link>
           <Link href="/login" className="text-sm font-bold text-navy/60 hover:text-primary transition-colors">
             Already have an account? <span className="text-primary">Login</span>

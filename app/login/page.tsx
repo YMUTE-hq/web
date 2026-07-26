@@ -24,8 +24,8 @@ export default function LoginPage() {
       <div className="layout-container flex h-full grow flex-col">
         <header className="flex items-center justify-between px-10 py-6 max-w-7xl mx-auto w-full">
           <Link href="/" className="flex items-center gap-2">
-            <img src="/logo-icon.png" alt="Logo" className="w-10 h-10 object-contain" />
-            <img src="/logo-text.png" alt="YMUTE" className="h-6 object-contain" />
+            <img src="/logo-icon.svg" alt="Logo" className="w-10 h-10 object-contain" />
+            <img src="/logo-text.svg" alt="YMUTE" className="h-6 object-contain" />
           </Link>
           <Link href="/signup" className="flex min-w-[100px] cursor-pointer items-center justify-center rounded-xl h-11 px-6 clay-button-primary text-white text-sm font-bold transition-transform hover:scale-105 active:scale-95">
             Join Now

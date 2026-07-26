@@ -29,9 +29,9 @@ export default function AdminSidebar() {
   return (
     <aside className="w-72 h-full flex flex-col bg-background-light/50 border-r border-primary/10 p-6 overflow-y-auto shrink-0">
       <Link href="/" className="flex items-center gap-2 mb-10 px-2 cursor-pointer group">
-        <img src="/logo-icon.png" alt="Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform" />
+        <img src="/logo-icon.svg" alt="Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform" />
         <div>
-          <img src="/logo-text.png" alt="YMUTE" className="h-5 object-contain" />
+          <img src="/logo-text.svg" alt="YMUTE" className="h-5 object-contain" />
           <p className="text-[10px] font-bold text-primary uppercase tracking-widest mt-1">Super Admin</p>
         </div>
       </Link>

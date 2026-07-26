@@ -94,8 +94,8 @@ function ExploreJobsContent() {
       <header className="flex px-6 lg:px-20 py-5 justify-between items-center bg-white/80 backdrop-blur-md border-b border-primary/10">
         <div className="flex gap-10 items-center">
           <Link href="/" className="flex items-center gap-2 group">
-            <img src="/logo-icon.png" alt="Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform" />
-            <img src="/logo-text.png" alt="YMUTE" className="h-6 object-contain hidden sm:block" />
+            <img src="/logo-icon.svg" alt="Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform" />
+            <img src="/logo-text.svg" alt="YMUTE" className="h-6 object-contain hidden sm:block" />
           </Link>
           <nav className="hidden md:flex gap-6 items-center">
             <Link className="text-navy/70 hover:text-primary text-sm font-semibold transition-colors" href="/explore-talent">Explore Talent</Link>

@@ -26,9 +26,9 @@ export default function CompanyDashboardLayout({ children }: { children: ReactNo
       {/* Sidebar */}
       <aside className="w-72 bg-background-light border-r border-primary/10 flex flex-col p-6 gap-8 hidden lg:flex">
         <Link href="/" className="flex items-center gap-2 px-2">
-          <img src="/logo-icon.png" alt="Logo" className="w-10 h-10 object-contain" />
+          <img src="/logo-icon.svg" alt="Logo" className="w-10 h-10 object-contain" />
           <div>
-            <img src="/logo-text.png" alt="YMUTE" className="h-5 object-contain" />
+            <img src="/logo-text.svg" alt="YMUTE" className="h-5 object-contain" />
             <p className="text-[10px] font-bold text-primary uppercase tracking-widest mt-1">Dashboard</p>
           </div>
         </Link>

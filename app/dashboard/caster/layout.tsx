@@ -23,9 +23,9 @@ export default function CasterDashboardLayout({ children }: { children: ReactNod
     <div className="flex h-screen overflow-hidden bg-background-light font-display">
       {/* Sidebar */}
       <aside className="w-72 bg-background-light border-r border-primary/10 flex flex-col p-6 hidden lg:flex">
-        <Link href="/" className="flex items-center gap-2 px-4 mb-10">
-          <img src="/logo-icon.png" alt="Logo" className="w-10 h-10 object-contain" />
-          <img src="/logo-text.png" alt="YMUTE" className="h-5 object-contain" />
+        <Link href="/" className="flex items-center gap-2 mb-8">
+          <img src="/logo-icon.svg" alt="Logo" className="w-10 h-10 object-contain" />
+          <img src="/logo-text.svg" alt="YMUTE" className="h-5 object-contain" />
         </Link>
         <nav className="flex-1 space-y-3">
           {navItems.map((item) => {

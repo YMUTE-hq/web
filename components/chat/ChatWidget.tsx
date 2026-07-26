@@ -79,7 +79,7 @@ export default function ChatWidget() {
               ) {
                 new Notification(senderName, {
                   body: newMessage.message_text || "Sent an attachment",
-                  icon: "/logo-icon.png",
+                  icon: "/logo-icon.svg",
                 });
               }
 

@@ -7,8 +7,8 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-12 mb-20">
         <div className="col-span-2 md:col-span-1">
           <div className="flex items-center gap-2 mb-6">
-            <img src="/logo-icon.png" alt="Logo" className="w-10 h-10 object-contain" />
-            <img src="/logo-text.png" alt="YMUTE" className="h-5 object-contain filter brightness-0 invert" />
+            <img src="/logo-icon.svg" alt="Logo" className="w-10 h-10 object-contain" />
+            <img src="/logo-text.svg" alt="YMUTE" className="h-5 object-contain filter brightness-0 invert" />
           </div>
           <p className="text-white/50 text-sm leading-relaxed">
             The world&apos;s leading marketplace for broadcasting talent and events. Empowering voices everywhere.
