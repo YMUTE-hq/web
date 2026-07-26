@@ -1,6 +1,8 @@
 import { AdminService } from "@/backend/services/AdminService";
 import { TrendingUp, Users, Briefcase, FileText, IndianRupee } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminReportsPage() {
   const stats = await AdminService.getStats();
   const jobs = await AdminService.getJobs() || [];

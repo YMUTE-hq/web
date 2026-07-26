@@ -84,23 +84,32 @@ export default function CompanyProfilePage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    await supabase.from("users").update(form).eq("id", user.id);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      await supabase.from("users").update(form).eq("id", user.id);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0]) return;
     setUploading(true);
-    const fd = new FormData();
-    fd.append("file", e.target.files[0]);
-    fd.append("folder", "logos");
-    fd.append("resource_type", "image");
-    fd.append("field", "company_logo_url");
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
-    const data = await res.json();
-    if (data.url) setLogoUrl(data.url);
-    setUploading(false);
+    try {
+      const fd = new FormData();
+      fd.append("file", e.target.files[0]);
+      fd.append("folder", "logos");
+      fd.append("resource_type", "image");
+      fd.append("field", "company_logo_url");
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.url) setLogoUrl(data.url);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (

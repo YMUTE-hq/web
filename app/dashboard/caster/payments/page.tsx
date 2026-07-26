@@ -17,9 +17,16 @@ export default function CasterPaymentsPage() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("applications").select("id, status, created_at, jobs(title, budget)")
-      .eq("caster_id", user.id).eq("status", "accepted")
-      .then(({ data }) => setAccepted((data as unknown as Application[]) || []));
+    const fetchPayments = async () => {
+      try {
+        const { data } = await supabase.from("applications").select("id, status, created_at, jobs(title, budget)")
+          .eq("caster_id", user.id).eq("status", "accepted");
+        setAccepted((data as unknown as Application[]) || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchPayments();
   }, [user]);
 
   return (

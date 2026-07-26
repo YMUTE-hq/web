@@ -4,6 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase";
 import { 
   Mic, Search, Trophy, Headphones, Gamepad2, CircleDot, Mic2, Radio,
   Star, UserCircle, MicVocal, Handshake, Briefcase, GraduationCap, Brain, 
@@ -20,14 +22,53 @@ type Job = {
   users: { company_name: string } | null;
 };
 
-type Props = {
-  recentJobs: Job[];
-  recentCasters: any[];
-  communityVoices: any[];
-};
-
-export default function LandingPageClient({ recentJobs, recentCasters, communityVoices }: Props) {
+export default function LandingPageClient() {
   const { user } = useAuth();
+  const [recentJobs, setRecentJobs] = useState<Job[]>([]);
+  const [recentCasters, setRecentCasters] = useState<any[]>([]);
+  const [communityVoices, setCommunityVoices] = useState<any[]>([]);
+
+  // Non-blocking async data fetch — page renders immediately, data fills in
+  useEffect(() => {
+    const supabase = createClient();
+
+    // Fire all 3 queries independently — none block each other or the page
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("jobs")
+          .select("id, title, domain, budget, language, event_date, users(company_name)")
+          .eq("status", "open")
+          .order("created_at", { ascending: false })
+          .limit(3);
+        if (data) setRecentJobs(data as any);
+      } catch {}
+    })();
+
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("users")
+          .select("id, full_name, domains, languages, rating, avatar_url")
+          .eq("role", "caster")
+          .order("created_at", { ascending: false })
+          .limit(4);
+        if (data) setRecentCasters(data);
+      } catch {}
+    })();
+
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("ratings")
+          .select("id, review, users!ratings_user_id_fkey(full_name, role, avatar_url)")
+          .not("review", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(2);
+        if (data) setCommunityVoices(data);
+      } catch {}
+    })();
+  }, []);
 
   const domains = [
     { icon: <Gamepad2 />, name: "Esports", desc: "Professional gaming commentary.", slug: "esports" },

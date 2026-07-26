@@ -2,6 +2,8 @@ import { AdminService } from "@/backend/services/AdminService";
 import { AdminJobActionButton, AdminDeleteButton } from "@/components/admin/AdminActions";
 import { Search, IndianRupee, Globe, Flag } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminJobsPage({ searchParams }: { searchParams: Promise<{ status?: string; search?: string }> }) {
   const params = await searchParams;
   const jobs = await AdminService.getJobs({ status: params.status, search: params.search }) || [];

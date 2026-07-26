@@ -2,6 +2,8 @@ import { AdminService } from "@/backend/services/AdminService";
 import { PaymentActionButton } from "@/components/admin/PaymentActionButton";
 import { CreditCard, IndianRupee } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPaymentsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const params = await searchParams;
   const payments = await AdminService.getPayments({ status: params.status }) || [];

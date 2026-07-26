@@ -2,6 +2,8 @@ import { AdminService } from "@/backend/services/AdminService";
 import { AdminActionButton, AdminDeleteButton } from "@/components/admin/AdminActions";
 import { Search, Star, Mic } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminCastersPage({ searchParams }: { searchParams: Promise<{ search?: string }> }) {
   const params = await searchParams;
   const casters = await AdminService.getCasters({ search: params.search }) || [];

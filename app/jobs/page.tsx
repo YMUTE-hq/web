@@ -51,19 +51,24 @@ function ExploreJobsContent() {
 
   const fetchJobs = async () => {
     setLoading(true);
-    let query = supabase
-      .from("jobs")
-      .select("id, title, domain, budget, language, event_date, created_at, status, users!company_id(company_name, verification_status)")
-      .eq("status", "open")
-      .order("created_at", { ascending: false });
+    try {
+      let query = supabase
+        .from("jobs")
+        .select("id, title, domain, budget, language, event_date, created_at, status, users!company_id(company_name, verification_status)")
+        .eq("status", "open")
+        .order("created_at", { ascending: false });
 
-    if (domain && domain !== "All") query = query.eq("domain", domain);
-    if (language && language !== "All") query = query.ilike("language", `%${language}%`);
-    if (debouncedSearch) query = query.or(`title.ilike.%${debouncedSearch}%,description.ilike.%${debouncedSearch}%`);
+      if (domain && domain !== "All") query = query.eq("domain", domain);
+      if (language && language !== "All") query = query.ilike("language", `%${language}%`);
+      if (debouncedSearch) query = query.or(`title.ilike.%${debouncedSearch}%,description.ilike.%${debouncedSearch}%`);
 
-    const { data } = await query;
-    setJobs((data as unknown as Job[]) || []);
-    setLoading(false);
+      const { data } = await query;
+      setJobs((data as unknown as Job[]) || []);
+    } catch {
+      setJobs([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchJobs(); }, [domain, language, debouncedSearch]);

@@ -10,19 +10,29 @@ type Application = {
   jobs: { id: string; title: string; event_date: string; domain: string } | null;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function CasterApplicationsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  
+  let user = null;
+  let rawApps = [];
 
-  if (!user) {
+  try {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    user = authData.user;
+    if (!user || authError) throw new Error("Auth failed");
+
+    const { data: rApps } = await supabase
+      .from("applications")
+      .select("id, status, created_at, message, jobs(id, title, event_date, domain)")
+      .eq("caster_id", user.id)
+      .order("created_at", { ascending: false });
+    rawApps = rApps || [];
+  } catch (error) {
+    console.error("Applications fetch error:", error);
     redirect("/login");
   }
-
-  const { data: rawApps } = await supabase
-    .from("applications")
-    .select("id, status, created_at, message, jobs(id, title, event_date, domain)")
-    .eq("caster_id", user.id)
-    .order("created_at", { ascending: false });
 
   const applications = (rawApps as unknown as Application[]) || [];
 

@@ -1,6 +1,8 @@
 import { AdminService } from "@/backend/services/AdminService";
 import { Calendar, Plus, TrendingUp, Check, X, Users, Briefcase, Mic, Building2 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminDashboardOverview() {
   const [stats, applications] = await Promise.all([
     AdminService.getStats(),

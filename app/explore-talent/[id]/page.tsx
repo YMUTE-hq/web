@@ -1,45 +1,118 @@
-import { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase-server";
+"use client";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { createClient } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import VerificationBadge from "@/components/VerificationBadge";
 
-export const metadata: Metadata = {
-  title: "Caster Profile | YMUTE",
+type Caster = {
+  id: string;
+  full_name: string;
+  avatar_url: string;
+  bio: string;
+  domains: string[];
+  languages: string[];
+  rating: number;
+  audio_sample_url: string;
+  created_at: string;
+  verification_status: string;
 };
 
-export default async function CasterProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const supabase = await createClient();
-  const { data: caster } = await supabase
-    .from("users")
-    .select("id, full_name, avatar_url, bio, domains, languages, rating, audio_sample_url, created_at, verification_status")
-    .eq("id", id)
-    .eq("role", "caster")
-    .single();
+export default function CasterProfilePage() {
+  const { id } = useParams<{ id: string }>();
+  const { user, profile } = useAuth();
+  const [caster, setCaster] = useState<Caster | null>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  if (!caster) return notFound();
+  const viewerRole = profile?.role || "";
 
-  const { data: { user } } = await supabase.auth.getUser();
-  let viewerRole = "";
-  if (user) {
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-    viewerRole = profile?.role || "";
+  useEffect(() => {
+    if (!id) return;
+    const supabase = createClient();
+
+    const fetchCasterData = async () => {
+      try {
+        const { data } = await supabase
+          .from("users")
+          .select("id, full_name, avatar_url, bio, domains, languages, rating, audio_sample_url, created_at, verification_status")
+          .eq("id", id)
+          .eq("role", "caster")
+          .single();
+
+        if (data) {
+          setCaster(data as any);
+          try {
+            const { data: r } = await supabase
+              .from("ratings")
+              .select("id, rating, review, created_at, users!user_id(full_name, avatar_url)")
+              .eq("caster_id", data.id)
+              .order("created_at", { ascending: false })
+              .limit(5);
+            if (r) setReviews(r);
+          } catch {}
+        } else {
+          setNotFound(true);
+        }
+      } catch {
+        setNotFound(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCasterData();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <main className="pt-24 min-h-screen bg-[var(--bg-light)] pb-20">
+          <div className="max-w-5xl mx-auto px-6 pt-10">
+            <div className="animate-pulse space-y-8">
+              <div className="h-4 w-32 bg-slate-200 rounded"></div>
+              <div className="clay-card-solid p-8 rounded-[2rem]">
+                <div className="flex gap-8">
+                  <div className="w-32 h-32 bg-slate-200 rounded-3xl"></div>
+                  <div className="flex-1 space-y-4">
+                    <div className="h-8 w-48 bg-slate-200 rounded"></div>
+                    <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                    <div className="h-4 w-full bg-slate-200 rounded"></div>
+                    <div className="h-4 w-3/4 bg-slate-200 rounded"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
   }
 
-  // Fetch recent reviews for this caster
-  const { data: reviews } = await supabase
-    .from("ratings")
-    .select("id, rating, review, created_at, users!user_id(full_name, avatar_url)")
-    .eq("caster_id", caster.id)
-    .order("created_at", { ascending: false })
-    .limit(5);
+  if (notFound || !caster) {
+    return (
+      <>
+        <Navbar />
+        <main className="pt-24 min-h-screen bg-[var(--bg-light)] flex items-center justify-center">
+          <div className="text-center">
+            <span className="material-symbols-outlined text-6xl text-slate-300 mb-4">person_off</span>
+            <h2 className="text-2xl font-black text-slate-700 mb-2">Caster Not Found</h2>
+            <p className="text-slate-500 mb-6">This profile doesn&apos;t exist or is unavailable.</p>
+            <Link href="/explore-talent" className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition">
+              Browse Talent
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>

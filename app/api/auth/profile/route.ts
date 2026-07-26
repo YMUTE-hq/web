@@ -16,7 +16,10 @@ export async function GET() {
       .eq("id", user.id)
       .single();
 
-    if (error || !profile) {
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    if (!profile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 

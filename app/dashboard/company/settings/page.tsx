@@ -20,9 +20,13 @@ export default function CompanySettingsPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    await supabase.from("users").update({ full_name: fullName }).eq("id", user.id);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      await supabase.from("users").update({ full_name: fullName }).eq("id", user.id);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (

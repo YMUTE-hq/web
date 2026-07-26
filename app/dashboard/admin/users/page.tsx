@@ -3,6 +3,8 @@ import { AdminActionButton, AdminDeleteButton } from "@/components/admin/AdminAc
 import { Users, Search } from "lucide-react";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<{ role?: string; search?: string }> }) {
   const params = await searchParams;
   const users = await AdminService.getUsers({ role: params.role, search: params.search }) || [];

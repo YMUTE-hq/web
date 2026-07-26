@@ -2,6 +2,8 @@ import { AdminService } from "@/backend/services/AdminService";
 import { AdminActionButton } from "@/components/admin/AdminActions";
 import { ShieldCheck } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminVerificationPage() {
   // Show casters and companies pending verification
   const allUsers = await AdminService.getUsers() || [];

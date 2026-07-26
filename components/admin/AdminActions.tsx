@@ -18,12 +18,12 @@ export function AdminActionButton({ userId, action, label, className = "", confi
     if (confirmMsg && !window.confirm(confirmMsg)) return;
     setLoading(true);
     try {
-      await fetch("/api/admin/users", {
+      const res = await fetch("/api/admin/users", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: userId, action }),
       });
-      router.refresh();
+      if (res.ok) router.refresh();
     } catch (e) {
       console.error(e);
     } finally {
@@ -52,8 +52,8 @@ export function AdminDeleteButton({ id, endpoint, label = "Delete" }: AdminDelet
     if (!window.confirm("Are you sure? This cannot be undone.")) return;
     setLoading(true);
     try {
-      await fetch(`${endpoint}?id=${id}`, { method: "DELETE" });
-      router.refresh();
+      const res = await fetch(`${endpoint}?id=${id}`, { method: "DELETE" });
+      if (res.ok) router.refresh();
     } catch (e) {
       console.error(e);
     } finally {
@@ -82,12 +82,12 @@ export function AdminJobActionButton({ jobId, action, label, className = "" }: A
   const handleClick = async () => {
     setLoading(true);
     try {
-      await fetch("/api/admin/jobs", {
+      const res = await fetch("/api/admin/jobs", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: jobId, action }),
       });
-      router.refresh();
+      if (res.ok) router.refresh();
     } catch (e) {
       console.error(e);
     } finally {
@@ -116,12 +116,12 @@ export function AdminAppStatusButton({ appId, status, label, className = "" }: A
   const handleClick = async () => {
     setLoading(true);
     try {
-      await fetch("/api/admin/applications", {
+      const res = await fetch("/api/admin/applications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: appId, status }),
       });
-      router.refresh();
+      if (res.ok) router.refresh();
     } catch (e) {
       console.error(e);
     } finally {
@@ -239,14 +239,16 @@ export function AdminLeaderboardPoints({ leaderboardId, currentPoints }: { leade
   const save = async () => {
     setLoading(true);
     try {
-      await fetch("/api/admin/community", {
+      const res = await fetch("/api/admin/community", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: leaderboardId, points }),
       });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-      router.refresh();
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+        router.refresh();
+      }
     } catch (e) {
       console.error(e);
     } finally {

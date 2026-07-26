@@ -10,39 +10,53 @@ type Application = {
   jobs: { title: string; event_date: string } | null;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function CasterDashboardPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  
+  let user = null;
+  let profile = null;
+  let rawApps = [];
+  let allApps = [];
 
-  if (!user) {
+  try {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    user = authData.user;
+    if (!user || authError) throw new Error("Auth failed");
+
+    const { data: p } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+    profile = p;
+
+    const { data: rApps } = await supabase
+      .from("applications")
+      .select("id, status, created_at, jobs(title, event_date)")
+      .eq("caster_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    rawApps = rApps || [];
+
+    const { data: aApps } = await supabase
+      .from("applications")
+      .select("status")
+      .eq("caster_id", user.id);
+    allApps = aApps || [];
+  } catch (error) {
+    console.error("Dashboard fetch error:", error);
     redirect("/login");
   }
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  const { data: rawApps } = await supabase
-    .from("applications")
-    .select("id, status, created_at, jobs(title, event_date)")
-    .eq("caster_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(5);
 
   const applications = (rawApps as unknown as Application[]) || [];
   
   // Fetch overall application stats for this caster
-  const { data: allApps } = await supabase
-    .from("applications")
-    .select("status")
-    .eq("caster_id", user.id);
-
   const stats = {
     total: allApps?.length || 0,
-    active: allApps?.filter((a) => a.status === "pending").length || 0,
-    accepted: allApps?.filter((a) => a.status === "accepted").length || 0,
+    active: allApps?.filter((a: any) => a.status === "pending").length || 0,
+    accepted: allApps?.filter((a: any) => a.status === "accepted").length || 0,
   };
 
   const statusColor = (s: string) => {

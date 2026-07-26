@@ -1,6 +1,8 @@
 import { AdminService } from "@/backend/services/AdminService";
 import { AdminAppStatusButton, AdminDeleteButton } from "@/components/admin/AdminActions";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminApplicationsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const params = await searchParams;
   const applications = await AdminService.getApplications({ status: params.status }) || [];

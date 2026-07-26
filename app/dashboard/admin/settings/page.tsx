@@ -2,6 +2,8 @@ import { AdminService } from "@/backend/services/AdminService";
 import { AdminSettingToggle, AdminSettingInput } from "@/components/admin/AdminActions";
 import { Settings } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminSettingsPage() {
   const settings = await AdminService.getSettings() || [];
   const settingsMap = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));

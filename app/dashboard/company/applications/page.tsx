@@ -25,34 +25,44 @@ function ApplicationsContent() {
 
   const fetchApps = async () => {
     if (!user) return;
-    let query = supabase
-      .from("applications")
-      .select("id, status, created_at, message, users!caster_id(id, full_name, avatar_url, bio, languages, domains, audio_sample_url), jobs(id, title)")
-      .order("created_at", { ascending: false });
+    try {
+      let query = supabase
+        .from("applications")
+        .select("id, status, created_at, message, users!caster_id(id, full_name, avatar_url, bio, languages, domains, audio_sample_url), jobs(id, title)")
+        .order("created_at", { ascending: false });
 
-    if (jobId) query = query.eq("job_id", jobId);
-    else {
-      const { data: jobs } = await supabase.from("jobs").select("id").eq("company_id", user.id);
-      const jobIds = jobs?.map((j) => j.id) || [];
-      if (jobIds.length === 0) { setApplications([]); setLoading(false); return; }
-      query = query.in("job_id", jobIds);
+      if (jobId) query = query.eq("job_id", jobId);
+      else {
+        const { data: jobs } = await supabase.from("jobs").select("id").eq("company_id", user.id);
+        const jobIds = jobs?.map((j) => j.id) || [];
+        if (jobIds.length === 0) { setApplications([]); return; }
+        query = query.in("job_id", jobIds);
+      }
+      const { data } = await query;
+      setApplications((data as unknown as Application[]) || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    const { data } = await query;
-    setApplications((data as unknown as Application[]) || []);
-    setLoading(false);
   };
 
   useEffect(() => { fetchApps(); }, [user, jobId]);
 
   const updateStatus = async (id: string, status: string) => {
     setProcessing(id);
-    await fetch(`/api/applications/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    setProcessing(null);
-    fetchApps();
+    try {
+      await fetch(`/api/applications/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      fetchApps();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setProcessing(null);
+    }
   };
 
   const statusBadge = (s: string) => {

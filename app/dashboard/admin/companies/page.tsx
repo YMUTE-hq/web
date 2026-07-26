@@ -2,6 +2,8 @@ import { AdminService } from "@/backend/services/AdminService";
 import { AdminActionButton, AdminDeleteButton } from "@/components/admin/AdminActions";
 import { Search, Building2 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminCompaniesPage({ searchParams }: { searchParams: Promise<{ search?: string }> }) {
   const params = await searchParams;
   const companies = await AdminService.getCompanies({ search: params.search }) || [];

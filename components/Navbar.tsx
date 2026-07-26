@@ -1,10 +1,11 @@
 "use client";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import NotificationInbox from "./NotificationInbox";
+import NotificationBell from "./NotificationBell";
+import LogoutButton from "./LogoutButton";
 
 export default function Navbar() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
 
   return (
     <nav className="fixed top-0 w-full z-50 px-6 py-4 flex justify-center bg-white/80 backdrop-blur-md border-b border-primary/10">
@@ -20,18 +21,18 @@ export default function Navbar() {
           <Link className="text-sm font-semibold hover:text-primary transition-colors text-slate-700" href="/games">Games</Link>
         </div>
         <div className="flex items-center gap-3">
-          {user ? (
+          {loading ? (
+            <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+          ) : user ? (
             <>
-              <NotificationInbox />
+              <NotificationBell />
               <Link
                 href="/dashboard"
                 className="px-5 py-2 text-sm font-bold clay-btn-secondary rounded-lg text-navy-deep hidden sm:block"
               >
                 Dashboard
               </Link>
-              <button onClick={signOut} className="px-5 py-2 text-sm font-bold clay-btn-primary rounded-lg text-white">
-                Logout
-              </button>
+              <LogoutButton variant="navbar" />
             </>
           ) : (
             <>

@@ -3,28 +3,42 @@ import { AdminService } from "@/backend/services/AdminService";
 import { createClient } from "@/lib/supabase-server";
 
 async function requireAdmin(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
-  if (profile?.role !== "admin") return null;
-  return user;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    const user = data?.user;
+    if (!user) return null;
+    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
+    if (profile?.role !== "admin") return null;
+    return user;
+  } catch (error) {
+    console.error("requireAdmin error", error);
+    return null;
+  }
 }
 
 export async function GET(req: NextRequest) {
-  const user = await requireAdmin(req);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  const { searchParams } = new URL(req.url);
-  const settings = await AdminService.getSettings();
-  return NextResponse.json(settings);
+  try {
+    const user = await requireAdmin(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const { searchParams } = new URL(req.url);
+    const settings = await AdminService.getSettings();
+    return NextResponse.json(settings);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  }
 }
 
 export async function PATCH(req: NextRequest) {
-  const user = await requireAdmin(req);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  const body = await req.json();
-  const { key, value } = body;
-  if (!key || value === undefined) return NextResponse.json({ error: "Missing key or value" }, { status: 400 });
-  const result = await AdminService.updateSetting(key, String(value));
-  return NextResponse.json(result);
+  try {
+    const user = await requireAdmin(req);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const body = await req.json();
+    const { key, value } = body;
+    if (!key || value === undefined) return NextResponse.json({ error: "Missing key or value" }, { status: 400 });
+    const result = await AdminService.updateSetting(key, String(value));
+    return NextResponse.json(result);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  }
 }

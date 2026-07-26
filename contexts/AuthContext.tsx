@@ -49,30 +49,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
+      // Direct query to Supabase users table
+      const { data } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      
+      if (data) {
+        setProfile(data as UserProfile);
+        return data as UserProfile;
+      }
+
+      // Fallback API route if direct query returns no data
       const res = await fetch("/api/auth/profile");
       if (res.ok) {
-        const data = await res.json();
-        setProfile(data as UserProfile);
+        const userProfile = await res.json();
+        setProfile(userProfile as UserProfile);
+        return userProfile as UserProfile;
       }
     } catch (e) {
       console.error("Error fetching profile", e);
     }
+    return null;
   };
 
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
-    });
+    let mounted = true;
 
-    return () => subscription.unsubscribe();
+    const initAuth = async () => {
+      try {
+        // Race getSession against a 3-second timeout.
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<null>((resolve) =>
+          setTimeout(() => resolve(null), 3000)
+        );
+
+        const result = await Promise.race([sessionPromise, timeoutPromise]);
+
+        if (mounted && result && 'data' in result) {
+          const session = result.data?.session;
+          setUser(session?.user ?? null);
+          if (session?.user) await fetchProfile(session.user.id);
+        }
+      } catch (e) {
+        console.error("Auth init failed:", e);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    let subscription: { unsubscribe: () => void } | null = null;
+    try {
+      const { data } = supabase.auth.onAuthStateChange(
+        async (_event, session) => {
+          if (!mounted) return;
+          setUser(session?.user ?? null);
+          if (session?.user) await fetchProfile(session.user.id);
+          else setProfile(null);
+        }
+      );
+      subscription = data.subscription;
+    } catch (e) {
+      console.error("Auth state change subscription failed:", e);
+    }
+
+    return () => {
+      mounted = false;
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -82,21 +129,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (error) return { error: error.message };
     if (data.user) {
+      setUser(data.user);
       try {
-        const res = await fetch("/api/auth/profile");
-        let role = "user";
-        if (res.ok) {
-          const userProfile = await res.json();
-          role = userProfile?.role || "user";
-          setProfile(userProfile as UserProfile);
-        }
+        const profileData = await fetchProfile(data.user.id);
+        const role = profileData?.role || "user";
+
         if (role === "caster") router.push("/dashboard/caster");
         else if (role === "company") router.push("/dashboard/company");
         else if (role === "admin") router.push("/dashboard/admin");
-        else router.push("/");
+        else router.push("/dashboard");
       } catch (e) {
         console.error("Sign in profile fetch error", e);
-        router.push("/");
+        router.push("/dashboard");
       }
     }
     return { error: null };

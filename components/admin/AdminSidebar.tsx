@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import LogoutButton from "@/components/LogoutButton";
 import { 
   LayoutDashboard, Users, Mic, Building2, Briefcase, 
   FileText, CreditCard, ShieldCheck, BarChart3, Settings, LogOut, MessageSquare
@@ -10,7 +10,6 @@ import {
 
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const { signOut } = useAuth();
 
   const links = [
     { href: "/dashboard/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -18,6 +17,7 @@ export default function AdminSidebar() {
     { href: "/dashboard/admin/casters", label: "Casters", icon: Mic },
     { href: "/dashboard/admin/companies", label: "Companies", icon: Building2 },
     { href: "/dashboard/admin/jobs", label: "Jobs", icon: Briefcase },
+    { href: "/dashboard/admin/careers", label: "YMUTE Careers", icon: Briefcase },
     { href: "/dashboard/admin/applications", label: "Applications", icon: FileText },
     { href: "/dashboard/admin/payments", label: "Payments", icon: CreditCard },
     { href: "/dashboard/admin/verification", label: "Verification", icon: ShieldCheck },
@@ -59,15 +59,17 @@ export default function AdminSidebar() {
         })}
       </nav>
       <div className="mt-auto pt-6">
-        <div className="clay-card shadow-clay rounded-xl p-4 flex items-center gap-3 bg-white/50">
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden shrink-0">
-            <span className="font-bold text-primary">AR</span>
+        <div className="clay-card shadow-clay rounded-2xl p-4 space-y-3 bg-white/70 border border-primary/10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center overflow-hidden shrink-0 font-black text-primary text-sm shadow-inner">
+              AD
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-black text-slate-900 truncate">Super Admin</p>
+              <p className="text-[10px] font-bold text-primary uppercase">YMUTE Org</p>
+            </div>
           </div>
-          <div className="flex-1">
-            <p className="text-xs font-bold text-slate-900 line-clamp-1">Admin YMUTE</p>
-            <button type="button" onClick={() => signOut()} className="text-[10px] text-slate-500 hover:text-red-500 transition-colors">Sign out</button>
-          </div>
-          <LogOut className="text-slate-400 w-4 h-4 shrink-0" />
+          <LogoutButton variant="sidebar-item" />
         </div>
       </div>
     </aside>

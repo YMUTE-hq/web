@@ -25,10 +25,14 @@ export default function ChatWidget() {
   useEffect(() => {
     if (!user) return;
     const fetchConversations = async () => {
-      const res = await fetch("/api/chat/conversations");
-      if (res.ok) {
-        const data = await res.json();
-        setConversations(data);
+      try {
+        const res = await fetch("/api/chat/conversations");
+        if (res.ok) {
+          const data = await res.json();
+          setConversations(data);
+        }
+      } catch (err) {
+        console.error("Error fetching conversations:", err);
       }
     };
     fetchConversations();
@@ -94,7 +98,9 @@ export default function ChatWidget() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status: string, err?: Error) => {
+        if (status === 'CHANNEL_ERROR') console.error('Realtime error:', err);
+      });
 
     return () => {
       globalChannel.unsubscribe();
@@ -116,13 +122,18 @@ export default function ChatWidget() {
     // Load initial messages
     const fetchMessages = async () => {
       setLoading(true);
-      const res = await fetch(`/api/chat/messages?conversationId=${activeConversation.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setMessages(data);
-        scrollToBottom();
+      try {
+        const res = await fetch(`/api/chat/messages?conversationId=${activeConversation.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setMessages(data);
+          scrollToBottom();
+        }
+      } catch (err) {
+        console.error("Error fetching messages:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchMessages();
@@ -145,11 +156,17 @@ export default function ChatWidget() {
             setMessages((prev) => [...prev, newMessage]);
             scrollToBottom();
             // Call API to mark as read in the database
-            fetch(`/api/chat/messages?conversationId=${activeConversation.id}`);
+            try {
+              fetch(`/api/chat/messages?conversationId=${activeConversation.id}`);
+            } catch (err) {
+              console.error(err);
+            }
           }
         }
       )
-      .subscribe();
+      .subscribe((status: string, err?: Error) => {
+        if (status === 'CHANNEL_ERROR') console.error('Realtime error:', err);
+      });
 
     return () => {
       subscription.unsubscribe();

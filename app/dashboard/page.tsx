@@ -22,6 +22,8 @@ export default function DashboardRouter() {
           // Fallback
           router.push("/");
         }
+      } else {
+        router.push("/");
       }
     }
   }, [user, profile, loading, router]);

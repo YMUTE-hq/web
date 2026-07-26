@@ -3,12 +3,29 @@ import { AdminRepository } from "../repositories/AdminRepository";
 export class AdminService {
   // ─── STATS ───────────────────────────────────────────
   static async getStats() {
-    return AdminRepository.getStats();
+    try {
+      return await AdminRepository.getStats();
+    } catch {
+      return {
+        totalUsers: 0,
+        totalCasters: 0,
+        totalCompanies: 0,
+        totalJobs: 0,
+        openJobs: 0,
+        totalApplications: 0,
+        pendingApplications: 0,
+        totalRevenue: 0,
+      };
+    }
   }
 
   // ─── USERS ───────────────────────────────────────────
   static async getUsers(filters?: { role?: string; search?: string }) {
-    return AdminRepository.getAllUsers(filters);
+    try {
+      return (await AdminRepository.getAllUsers(filters)) || [];
+    } catch {
+      return [];
+    }
   }
 
   static async suspendUser(userId: string) {
@@ -33,7 +50,11 @@ export class AdminService {
 
   // ─── CASTERS ─────────────────────────────────────────
   static async getCasters(filters?: { search?: string }) {
-    return AdminRepository.getAllUsers({ role: "caster", ...filters });
+    try {
+      return (await AdminRepository.getAllUsers({ role: "caster", ...filters })) || [];
+    } catch {
+      return [];
+    }
   }
 
   static async verifyCaster(casterId: string) {
@@ -50,7 +71,11 @@ export class AdminService {
 
   // ─── COMPANIES ───────────────────────────────────────
   static async getCompanies(filters?: { search?: string }) {
-    return AdminRepository.getAllUsers({ role: "company", ...filters });
+    try {
+      return (await AdminRepository.getAllUsers({ role: "company", ...filters })) || [];
+    } catch {
+      return [];
+    }
   }
 
   static async verifyCompany(companyId: string) {
@@ -63,7 +88,11 @@ export class AdminService {
 
   // ─── JOBS ────────────────────────────────────────────
   static async getJobs(filters?: { status?: string; search?: string }) {
-    return AdminRepository.getAllJobs(filters);
+    try {
+      return (await AdminRepository.getAllJobs(filters)) || [];
+    } catch {
+      return [];
+    }
   }
 
   static async approveJob(jobId: string) {
@@ -84,7 +113,11 @@ export class AdminService {
 
   // ─── APPLICATIONS ────────────────────────────────────
   static async getApplications(filters?: { status?: string }) {
-    return AdminRepository.getAllApplications(filters);
+    try {
+      return (await AdminRepository.getAllApplications(filters)) || [];
+    } catch {
+      return [];
+    }
   }
 
   static async overrideApplicationStatus(appId: string, status: string) {
@@ -97,7 +130,11 @@ export class AdminService {
 
   // ─── PAYMENTS ────────────────────────────────────────
   static async getPayments(filters?: { status?: string }) {
-    return AdminRepository.getAllPayments(filters);
+    try {
+      return (await AdminRepository.getAllPayments(filters)) || [];
+    } catch {
+      return [];
+    }
   }
 
   static async markPaymentPaid(paymentId: string) {
@@ -110,7 +147,11 @@ export class AdminService {
 
   // ─── REPORTS ─────────────────────────────────────────
   static async getReports(filters?: { status?: string }) {
-    return AdminRepository.getAllReports(filters);
+    try {
+      return (await AdminRepository.getAllReports(filters)) || [];
+    } catch {
+      return [];
+    }
   }
 
   static async resolveReport(reportId: string, adminId: string) {
@@ -123,7 +164,11 @@ export class AdminService {
 
   // ─── COMMUNITY MODERATION ────────────────────────────
   static async getCommunityPosts() {
-    return AdminRepository.getAllRatings();
+    try {
+      return (await AdminRepository.getAllRatings()) || [];
+    } catch {
+      return [];
+    }
   }
 
   static async deleteCommunityPost(postId: string) {
@@ -131,7 +176,11 @@ export class AdminService {
   }
 
   static async getLeaderboard() {
-    return AdminRepository.getLeaderboard();
+    try {
+      return (await AdminRepository.getLeaderboard()) || [];
+    } catch {
+      return [];
+    }
   }
 
   static async updateLeaderboardPoints(leaderboardId: string, points: number) {
@@ -140,7 +189,11 @@ export class AdminService {
 
   // ─── SETTINGS ────────────────────────────────────────
   static async getSettings() {
-    return AdminRepository.getSettings();
+    try {
+      return (await AdminRepository.getSettings()) || [];
+    } catch {
+      return [];
+    }
   }
 
   static async updateSetting(key: string, value: string) {

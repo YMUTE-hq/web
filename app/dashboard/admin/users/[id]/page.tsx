@@ -7,14 +7,26 @@ import {
 } from "lucide-react";
 import AdminUserEditForm from "./AdminUserEditForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = createAdminClient();
-  const { data: u, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", id)
-    .single();
+  let supabase;
+  let u = null;
+  let error = null;
+
+  try {
+    supabase = createAdminClient();
+    const res = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", id)
+      .single();
+    u = res.data;
+    error = res.error;
+  } catch (err: any) {
+    error = err;
+  }
 
   if (error) {
     // Show error instead of silent 404 so we can diagnose
@@ -44,25 +56,34 @@ ALTER TABLE public.users
   if (!u) return notFound();
 
 
-  // Fetch recent applications if caster
-  const { data: apps } = u.role === "caster"
-    ? await supabase
-        .from("applications")
-        .select("id, status, created_at, jobs(title)")
-        .eq("caster_id", u.id)
-        .order("created_at", { ascending: false })
-        .limit(5)
-    : { data: [] };
+  let apps: any[] = [];
+  let jobs: any[] = [];
 
-  // Fetch posted jobs if company
-  const { data: jobs } = u.role === "company"
-    ? await supabase
-        .from("jobs")
-        .select("id, title, status, created_at")
-        .eq("company_id", u.id)
-        .order("created_at", { ascending: false })
-        .limit(5)
-    : { data: [] };
+  try {
+    // Fetch recent applications if caster
+    const appsRes = u.role === "caster" && supabase
+      ? await supabase
+          .from("applications")
+          .select("id, status, created_at, jobs(title)")
+          .eq("caster_id", u.id)
+          .order("created_at", { ascending: false })
+          .limit(5)
+      : { data: [] };
+    apps = appsRes.data || [];
+
+    // Fetch posted jobs if company
+    const jobsRes = u.role === "company" && supabase
+      ? await supabase
+          .from("jobs")
+          .select("id, title, status, created_at")
+          .eq("company_id", u.id)
+          .order("created_at", { ascending: false })
+          .limit(5)
+      : { data: [] };
+    jobs = jobsRes.data || [];
+  } catch (err) {
+    console.error("Relations fetch error:", err);
+  }
 
   const verificationBadge = (status: string) => {
     switch (status) {

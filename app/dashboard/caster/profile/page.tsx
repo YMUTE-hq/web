@@ -13,44 +13,59 @@ export default function CasterProfilePage() {
 
   useEffect(() => {
     if (user) {
-      supabase.from("users").select("*").eq("id", user.id).single().then(({ data }) => {
-        if (data) {
-          setForm({
-            full_name: data.full_name || "",
-            bio: data.bio || "",
-            languages: (data.languages || []).join(", "),
-            domains: (data.domains || []).join(", "),
-          });
-          setAudioUrl(data.audio_sample_url || "");
+      const fetchProfile = async () => {
+        try {
+          const { data } = await supabase.from("users").select("*").eq("id", user.id).single();
+          if (data) {
+            setForm({
+              full_name: data.full_name || "",
+              bio: data.bio || "",
+              languages: (data.languages || []).join(", "),
+              domains: (data.domains || []).join(", "),
+            });
+            setAudioUrl(data.audio_sample_url || "");
+          }
+        } catch (err) {
+          console.error(err);
         }
-      });
+      };
+      fetchProfile();
     }
   }, [user]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    await supabase.from("users").update({
-      full_name: form.full_name, bio: form.bio,
-      languages: form.languages.split(",").map((s) => s.trim()).filter(Boolean),
-      domains: form.domains.split(",").map((s) => s.trim()).filter(Boolean),
-    }).eq("id", user.id);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      await supabase.from("users").update({
+        full_name: form.full_name, bio: form.bio,
+        languages: form.languages.split(",").map((s) => s.trim()).filter(Boolean),
+        domains: form.domains.split(",").map((s) => s.trim()).filter(Boolean),
+      }).eq("id", user.id);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0]) return;
     setUploading(true);
-    const fd = new FormData();
-    fd.append("file", e.target.files[0]);
-    fd.append("folder", "audio");
-    fd.append("resource_type", "auto");
-    fd.append("field", "audio_sample_url");
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
-    const data = await res.json();
-    if (data.url) setAudioUrl(data.url);
-    setUploading(false);
+    try {
+      const fd = new FormData();
+      fd.append("file", e.target.files[0]);
+      fd.append("folder", "audio");
+      fd.append("resource_type", "auto");
+      fd.append("field", "audio_sample_url");
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.url) setAudioUrl(data.url);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (

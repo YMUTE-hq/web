@@ -3,10 +3,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
-import NotificationInbox from "@/components/NotificationInbox";
+import NotificationBell from "@/components/NotificationBell";
+import LogoutButton from "@/components/LogoutButton";
 
 export default function CasterDashboardLayout({ children }: { children: ReactNode }) {
-  const { profile, signOut } = useAuth();
+  const { profile, loading, signOut } = useAuth();
   const pathname = usePathname();
 
   const navItems = [
@@ -46,28 +47,34 @@ export default function CasterDashboardLayout({ children }: { children: ReactNod
           <p className="text-sm font-bold text-slate-800">Free Tier</p>
           <button className="mt-3 w-full py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-clay-primary hover:opacity-90">UPGRADE PRO</button>
         </div>
-        <div className="flex items-center gap-3 px-4">
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt={profile.full_name || ""} className="w-10 h-10 rounded-full object-cover" />
-            ) : (
-              <span className="material-symbols-outlined text-primary">person</span>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-slate-900 truncate">{profile?.full_name || "Caster"}</p>
-            <p className="text-xs text-primary font-bold uppercase">Caster</p>
-          </div>
-          <button onClick={signOut} className="text-rose-500 hover:text-rose-600">
-            <span className="material-symbols-outlined">logout</span>
-          </button>
+        <div className="clay-card p-4 rounded-2xl bg-white/70 border border-primary/10 space-y-3">
+          {loading ? (
+            <div className="w-full h-12 rounded-xl border-2 border-primary border-t-transparent animate-spin"></div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt={profile.full_name || ""} className="w-10 h-10 rounded-xl object-cover" />
+                  ) : (
+                    <span className="material-symbols-outlined text-primary">person</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-slate-900 truncate">{profile?.full_name || "Caster"}</p>
+                  <p className="text-[10px] text-primary font-bold uppercase">Caster</p>
+                </div>
+              </div>
+              <LogoutButton variant="sidebar-item" />
+            </>
+          )}
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-background-light p-4 md:p-8 flex flex-col">
         <div className="flex justify-end items-center mb-4">
-          <NotificationInbox />
+          <NotificationBell />
         </div>
         <div className="flex-1">
           {children}

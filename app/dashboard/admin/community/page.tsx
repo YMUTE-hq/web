@@ -2,6 +2,8 @@ import { AdminService } from "@/backend/services/AdminService";
 import { AdminDeleteButton, AdminLeaderboardPoints } from "@/components/admin/AdminActions";
 import { MessageSquare, Star, Trophy } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminCommunityPage() {
   const posts = await AdminService.getCommunityPosts() || [];
   const leaderboard = await AdminService.getLeaderboard() || [];

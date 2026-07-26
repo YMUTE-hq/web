@@ -2,38 +2,50 @@ import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default async function CompanyDashboardPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  
+  let user = null;
+  let profile = null;
+  let recentJobs: any[] = [];
+  let apps: any[] = [];
 
-  if (!user) {
+  try {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    user = authData.user;
+    if (!user || authError) throw new Error("Auth failed");
+
+    const { data: p } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+    profile = p;
+
+    const { data: jobs } = await supabase
+      .from("jobs")
+      .select("id, title, status, created_at, domain")
+      .eq("company_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    recentJobs = jobs || [];
+
+    const { data: a } = await supabase
+      .from("applications")
+      .select("id, status, jobs!inner(company_id)")
+      .eq("jobs.company_id", user.id);
+    apps = a || [];
+  } catch (error) {
+    console.error("Dashboard fetch error:", error);
     redirect("/login");
   }
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  const { data: jobs } = await supabase
-    .from("jobs")
-    .select("id, title, status, created_at, domain")
-    .eq("company_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(5);
-
-  const recentJobs = jobs || [];
-
-  const { data: apps } = await supabase
-    .from("applications")
-    .select("id, status, jobs!inner(company_id)")
-    .eq("jobs.company_id", user.id);
 
   const stats = {
     jobs: recentJobs.length,
     applications: apps?.length || 0,
-    hired: apps?.filter((a) => a.status === "accepted").length || 0,
+    hired: apps?.filter((a: any) => a.status === "accepted").length || 0,
   };
 
   return (

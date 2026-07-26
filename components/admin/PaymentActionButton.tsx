@@ -9,12 +9,14 @@ export function PaymentActionButton({ paymentId, action, label, className }: { p
   const handleClick = async () => {
     setLoading(true);
     try {
-      await fetch("/api/admin/payments", {
+      const res = await fetch("/api/admin/payments", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: paymentId, status: action }),
       });
-      router.refresh();
+      if (res.ok) router.refresh();
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }

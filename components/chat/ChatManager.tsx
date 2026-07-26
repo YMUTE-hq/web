@@ -127,11 +127,17 @@ export default function ChatManager() {
               if (current.some((m) => m.id === newMessage.id)) return current;
               return [...current, newMessage];
             });
-            fetch(`/api/chat/messages?conversationId=${activeChat.id}`);
+            try {
+              fetch(`/api/chat/messages?conversationId=${activeChat.id}`);
+            } catch (err) {
+              console.error(err);
+            }
           }
         }
       )
-      .subscribe();
+      .subscribe((status: string, err?: Error) => {
+        if (status === 'CHANNEL_ERROR') console.error('Realtime error:', err);
+      });
 
     return () => {
       supabase.removeChannel(channel);

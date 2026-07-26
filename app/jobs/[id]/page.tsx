@@ -41,9 +41,18 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    fetch(`/api/jobs/${id}`)
-      .then((r) => r.json())
-      .then((data) => { setJob(data); setLoading(false); });
+    const fetchJobDetails = async () => {
+      try {
+        const res = await fetch(`/api/jobs/${id}`);
+        const data = await res.json();
+        setJob(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchJobDetails();
   }, [id]);
 
   useEffect(() => {
@@ -61,15 +70,21 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     e.preventDefault();
     setApplying(true);
     setError("");
-    const res = await fetch("/api/applications", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ job_id: id, message }),
-    });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error || "Failed to apply"); }
-    else { setSuccess("Application submitted! We will notify you when the company responds."); setHasApplied(true); setShowApplyForm(false); }
-    setApplying(false);
+    try {
+      const res = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: id, message }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Failed to apply"); }
+      else { setSuccess("Application submitted! We will notify you when the company responds."); setHasApplied(true); setShowApplyForm(false); }
+    } catch (err) {
+      console.error(err);
+      setError("An unexpected error occurred");
+    } finally {
+      setApplying(false);
+    }
   };
 
   if (loading) return (

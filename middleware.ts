@@ -28,36 +28,81 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  let supabaseResponse = NextResponse.next({ request });
+  // ─── PUBLIC ROUTES: No Supabase contact needed ───
+  // Only contact Supabase for /dashboard/* routes that need auth.
+  // Everything else (homepage, login, signup, jobs, explore, community, API routes)
+  // passes through instantly with zero network dependency.
+  if (!path.startsWith("/dashboard")) {
+    return NextResponse.next({ request });
+  }
 
-  // Initialize securely with correct types
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
+  // ─── PROTECTED ROUTES: /dashboard/* ───
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    // No Supabase config — redirect to login
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("error", "service_unavailable");
+    return NextResponse.redirect(url);
+  }
+
+  // Check if there are any Supabase auth cookies at all (handles chunked cookies like sb-xxx-auth-token.0)
+  const hasAuthCookies = request.cookies.getAll().some(
+    (c) => c.name.includes("auth-token") || (c.name.startsWith("sb-") && c.name.includes("token"))
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!hasAuthCookies) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
 
-  // Protect dashboard routes
-  if (path.startsWith("/dashboard")) {
+  let supabaseResponse = NextResponse.next({ request });
+
+  try {
+    // Use AbortController to timeout the Supabase request after 5 seconds
+    // so the middleware doesn't hang for 30+ seconds when Supabase is down.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const supabase = createServerClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value)
+            );
+            supabaseResponse = NextResponse.next({ request });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options)
+            );
+          },
+        },
+        auth: {
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+          persistSession: false,
+        },
+        global: {
+          fetch: (url, options) => {
+            return fetch(url, { ...options, signal: controller.signal });
+          },
+        },
+      }
+    );
+
+    const { data } = await supabase.auth.getUser();
+    const user = data?.user;
+
+    clearTimeout(timeout);
+
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
@@ -88,6 +133,13 @@ export async function middleware(request: NextRequest) {
       url.pathname = role === "admin" ? "/dashboard/admin" : (role === "user" ? "/" : `/dashboard/${role}`);
       return NextResponse.redirect(url);
     }
+  } catch {
+    // Supabase unreachable (timeout, network down, project paused)
+    // Redirect to login with error instead of hanging forever
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("error", "service_unavailable");
+    return NextResponse.redirect(url);
   }
 
   return supabaseResponse;

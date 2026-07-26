@@ -20,19 +20,29 @@ export default function CompanyJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchJobs = () => {
+  const fetchJobs = async () => {
     if (!user) return;
-    supabase.from("jobs").select("id, title, domain, status, budget, event_date, created_at")
-      .eq("company_id", user.id).order("created_at", { ascending: false })
-      .then(({ data }) => { setJobs((data || []) as Job[]); setLoading(false); });
+    try {
+      const { data } = await supabase.from("jobs").select("id, title, domain, status, budget, event_date, created_at")
+        .eq("company_id", user.id).order("created_at", { ascending: false });
+      setJobs((data || []) as Job[]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchJobs(); }, [user]);
 
   const toggleStatus = async (job: Job) => {
     const newStatus = job.status === "open" ? "closed" : "open";
-    await supabase.from("jobs").update({ status: newStatus }).eq("id", job.id);
-    fetchJobs();
+    try {
+      await supabase.from("jobs").update({ status: newStatus }).eq("id", job.id);
+      fetchJobs();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
