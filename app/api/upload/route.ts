@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { checkRateLimit } from "@/lib/rate-limiter";
 
 export async function POST(request: NextRequest) {
   try {
+    // Tier 1 Rate Limit: Max 5 uploads per 10 minutes per IP
+    const rateCheck = checkRateLimit(request, {
+      prefix: "upload",
+      limit: 5,
+      windowMs: 10 * 60 * 1000,
+    });
+
+    if (!rateCheck.allowed && rateCheck.response) {
+      return rateCheck.response;
+    }
+
     const supabase = await createClient();
     const { data: authData } = await supabase.auth.getUser();
     const user = authData?.user;

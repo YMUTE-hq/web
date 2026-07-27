@@ -60,6 +60,17 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
+.clay-card-dark {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 4px 4px 8px rgba(255, 255, 255, 0.08),
+    inset -4px -4px 8px rgba(0, 0, 0, 0.4),
+    8px 8px 24px rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+}
+
 .clay-btn-primary {
   background: #c8a137;
   box-shadow:

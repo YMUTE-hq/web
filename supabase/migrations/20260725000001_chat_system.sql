@@ -1,9 +1,4 @@
--- =========================================
--- YMUTE Platform – Chat System Schema
--- Run this in the Supabase SQL Editor
--- =========================================
-
--- Create conversations table
+-- Migration: Realtime Chat System Schema
 CREATE TABLE IF NOT EXISTS public.conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   type TEXT NOT NULL CHECK (type IN ('direct', 'job', 'support')),
@@ -11,7 +6,6 @@ CREATE TABLE IF NOT EXISTS public.conversations (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Create conversation_members table
 CREATE TABLE IF NOT EXISTS public.conversation_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   conversation_id UUID NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
@@ -21,7 +15,6 @@ CREATE TABLE IF NOT EXISTS public.conversation_members (
   UNIQUE(conversation_id, user_id)
 );
 
--- Create messages table
 CREATE TABLE IF NOT EXISTS public.messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   conversation_id UUID NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
@@ -37,10 +30,6 @@ CREATE TABLE IF NOT EXISTS public.messages (
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversation_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-
--- =========================================
--- ROW LEVEL SECURITY POLICIES
--- =========================================
 
 -- Conversations Policies
 CREATE POLICY "Users can view their own conversations" 
@@ -87,13 +76,14 @@ CREATE POLICY "Users can view messages in their conversations"
     )
   );
 
--- =========================================
--- ENABLE REALTIME
--- =========================================
-
--- Enable Replica Identity Full for messages to ensure all data is available in Realtime streams
+-- ENABLE REALTIME WEBSOCKETS
 ALTER TABLE public.messages REPLICA IDENTITY FULL;
-
--- Add table to the supabase_realtime publication to enable subscriptions
--- Note: In Supabase dashboard, this can also be done via Database -> Replication
-ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'messages'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+  END IF;
+END $$;

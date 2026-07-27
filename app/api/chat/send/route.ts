@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase-server";
 import { ChatService } from "@/backend/services/ChatService";
+import { checkRateLimit } from "@/lib/rate-limiter";
 
 export async function POST(req: NextRequest) {
   try {
+    // Tier 2 Rate Limit: Max 20 messages per minute per IP
+    const rateCheck = checkRateLimit(req, {
+      prefix: "chat_send",
+      limit: 20,
+      windowMs: 60 * 1000,
+    });
+
+    if (!rateCheck.allowed && rateCheck.response) {
+      return rateCheck.response;
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 

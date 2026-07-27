@@ -219,11 +219,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setUser(null);
       setProfile(null);
-      await supabase.auth.signOut();
+
+      // 1. Call server logout API to purge all server cookies (handles chunked cookies)
+      await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+
+      // 2. Client-side Supabase sign out
+      await supabase.auth.signOut().catch(() => {});
+
+      // 3. Clear client-side document cookies as extra safety net
+      if (typeof document !== "undefined") {
+        document.cookie.split(";").forEach((c) => {
+          const name = c.split("=")[0].trim();
+          if (name.includes("auth-token") || name.includes("token") || name.startsWith("sb-")) {
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+          }
+        });
+      }
     } catch (e) {
       console.error("Sign out error", e);
     } finally {
-      window.location.assign("/login");
+      window.location.href = "/login";
     }
   };
 

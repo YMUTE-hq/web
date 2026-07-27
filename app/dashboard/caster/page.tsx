@@ -146,28 +146,32 @@ export default async function CasterDashboardPage() {
       </div>
 
       {/* Upgrade Banner */}
-      <section className="clay-card-solid bg-gradient-to-r from-slate-900 to-slate-800 p-8 text-white relative overflow-hidden">
+      <section className="clay-card-dark p-8 md:p-10 relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <span className="inline-block px-3 py-1 bg-primary rounded-full text-[10px] font-bold uppercase mb-4">Limited Offer</span>
-            <h3 className="text-3xl font-bold mb-2">Elevate Your Career</h3>
-            <p className="text-slate-300 max-w-md">Get featured at the top of organizer searches and double your application success rate with YMUTE Premium.</p>
+            <span className="inline-block px-3 py-1 bg-primary text-slate-950 rounded-full text-[10px] font-black uppercase tracking-wider mb-4 shadow-sm">Limited Offer</span>
+            <h3 className="text-3xl font-black text-white mb-2 tracking-tight">Elevate Your Career</h3>
+            <p className="text-slate-300 max-w-md text-sm font-medium leading-relaxed">Get featured at the top of organizer searches and double your application success rate with YMUTE Premium.</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="clay-card bg-white/10 backdrop-blur-md p-4 min-w-[180px]">
-              <p className="text-slate-400 text-xs font-semibold mb-1">Standard</p>
-              <p className="text-2xl font-bold mb-4">₹0 <span className="text-sm font-normal text-slate-400">/mo</span></p>
-              <button className="w-full py-2 rounded-lg bg-white/20 text-xs font-bold">Current Plan</button>
+            <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-700/80 shadow-lg min-w-[180px] flex flex-col justify-between">
+              <div>
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Standard</p>
+                <p className="text-2xl font-black text-white mb-4">₹0 <span className="text-sm font-normal text-slate-400">/mo</span></p>
+              </div>
+              <button className="w-full py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold shadow-inner">Current Plan</button>
             </div>
-            <div className="clay-card bg-primary p-4 min-w-[180px]">
-              <p className="text-white/80 text-xs font-semibold mb-1">Elite Caster</p>
-              <p className="text-2xl font-bold mb-4">₹1,499 <span className="text-sm font-normal text-white/80">/mo</span></p>
-              <button className="w-full py-2 rounded-lg bg-white text-primary text-xs font-bold">Upgrade Now</button>
+            <div className="p-5 rounded-2xl bg-primary text-slate-950 shadow-clay-primary border border-yellow-300/40 min-w-[180px] flex flex-col justify-between">
+              <div>
+                <p className="text-slate-950/80 text-xs font-black uppercase tracking-wider mb-1">Elite Caster</p>
+                <p className="text-2xl font-black text-slate-950 mb-4">₹1,499 <span className="text-sm font-bold text-slate-900/80">/mo</span></p>
+              </div>
+              <button className="w-full py-2.5 rounded-xl bg-slate-950 text-white hover:bg-slate-900 text-xs font-black shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all">Upgrade Now</button>
             </div>
           </div>
         </div>
-        <div className="absolute -right-20 -top-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl"></div>
-        <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
+        <div className="absolute -right-20 -top-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
       </section>
     </>
   );

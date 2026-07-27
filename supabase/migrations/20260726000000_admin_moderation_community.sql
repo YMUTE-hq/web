@@ -1,22 +1,19 @@
--- =========================================
--- YMUTE Admin System – Full Migration
--- Run this in Supabase SQL Editor
--- =========================================
-
--- Add is_suspended column if not exists
+-- Migration: Admin, Moderation, Settings & Community Subsystems
+-- 1. EXTEND USERS TABLE
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN DEFAULT FALSE;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT FALSE;
 
--- Add admin approval for jobs
+-- 2. EXTEND JOBS TABLE
 ALTER TABLE public.jobs ADD COLUMN IF NOT EXISTS admin_approved BOOLEAN DEFAULT TRUE;
 ALTER TABLE public.jobs ADD COLUMN IF NOT EXISTS flagged BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.jobs ADD COLUMN IF NOT EXISTS approved_by UUID REFERENCES public.users(id) ON DELETE SET NULL;
 
--- Notifications type column
+-- 3. EXTEND NOTIFICATIONS TABLE
 ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'general';
 ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS link TEXT;
 
--- Admin reports/moderation table
+-- 4. CREATE REPORTS TABLE (Moderation)
 CREATE TABLE IF NOT EXISTS public.reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   reporter_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
@@ -28,7 +25,7 @@ CREATE TABLE IF NOT EXISTS public.reports (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Platform settings table (admin controlled)
+-- 5. CREATE PLATFORM SETTINGS TABLE
 CREATE TABLE IF NOT EXISTS public.platform_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   key TEXT UNIQUE NOT NULL,
@@ -37,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public.platform_settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Insert default platform settings
+-- Insert Default Platform Settings
 INSERT INTO public.platform_settings (key, value, description) VALUES
   ('registration_enabled', 'true', 'Allow new user registrations'),
   ('caster_registration_enabled', 'true', 'Allow new caster registrations'),
@@ -49,7 +46,7 @@ INSERT INTO public.platform_settings (key, value, description) VALUES
   ('feature_games', 'true', 'Enable games section')
 ON CONFLICT (key) DO NOTHING;
 
--- Community posts table
+-- 6. CREATE COMMUNITY TABLES
 CREATE TABLE IF NOT EXISTS public.posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -58,7 +55,6 @@ CREATE TABLE IF NOT EXISTS public.posts (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Comments table
 CREATE TABLE IF NOT EXISTS public.comments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   post_id UUID NOT NULL REFERENCES public.posts(id) ON DELETE CASCADE,
@@ -67,34 +63,34 @@ CREATE TABLE IF NOT EXISTS public.comments (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Drop old role constraint and re-add with admin
+-- 7. REFRESH ROLE CONSTRAINT
 ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_role_check;
 ALTER TABLE public.users ADD CONSTRAINT users_role_check 
   CHECK (role IN ('caster', 'company', 'user', 'admin'));
 
--- Enable RLS on new tables
+-- 8. ENABLE RLS
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.platform_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 
--- Safe policy creation with DO block
+-- 9. CREATE POLICIES SAFELY
 DO $$
 BEGIN
-  -- Reports policies
+  -- Reports
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'reports' AND policyname = 'Users can create reports') THEN
     CREATE POLICY "Users can create reports" ON public.reports FOR INSERT WITH CHECK (auth.uid() = reporter_id);
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'reports' AND policyname = 'Users can view their own reports') THEN
-    CREATE POLICY "Users can view their own reports" ON public.reports FOR SELECT USING (auth.uid() = reporter_id);
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'reports' AND policyname = 'Users can view own reports') THEN
+    CREATE POLICY "Users can view own reports" ON public.reports FOR SELECT USING (auth.uid() = reporter_id);
   END IF;
 
-  -- Platform settings (read-only for all, write for service role only)
+  -- Settings
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'platform_settings' AND policyname = 'Anyone can read settings') THEN
     CREATE POLICY "Anyone can read settings" ON public.platform_settings FOR SELECT USING (true);
   END IF;
 
-  -- Posts policies
+  -- Posts
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'posts' AND policyname = 'Anyone can view posts') THEN
     CREATE POLICY "Anyone can view posts" ON public.posts FOR SELECT USING (true);
   END IF;
@@ -105,7 +101,7 @@ BEGIN
     CREATE POLICY "Users can delete own posts" ON public.posts FOR DELETE USING (auth.uid() = user_id);
   END IF;
 
-  -- Comments policies
+  -- Comments
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'comments' AND policyname = 'Anyone can view comments') THEN
     CREATE POLICY "Anyone can view comments" ON public.comments FOR SELECT USING (true);
   END IF;
@@ -113,19 +109,3 @@ BEGIN
     CREATE POLICY "Users can create comments" ON public.comments FOR INSERT WITH CHECK (auth.uid() = user_id);
   END IF;
 END $$;
-
--- Update trigger to handle conflicts gracefully
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.users (id, email, role, full_name)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'role', 'user'),
-    COALESCE(NEW.raw_user_meta_data->>'full_name', '')
-  )
-  ON CONFLICT (id) DO NOTHING;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;

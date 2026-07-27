@@ -28,6 +28,8 @@ type Job = {
   } | null;
 };
 
+import LogoLoader from "@/components/ui/LogoLoader";
+
 export default function JobDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user, profile } = useAuth();
@@ -87,11 +89,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     }
   };
 
-  if (loading) return (
-    <div className="bg-background-light min-h-screen flex items-center justify-center">
-      <div className="text-primary text-2xl font-bold animate-pulse">Loading...</div>
-    </div>
-  );
+  if (loading) {
+    return <LogoLoader fullScreen size="lg" label="Loading Job Details..." />;
+  }
 
   if (!job) return (
     <div className="bg-background-light min-h-screen flex items-center justify-center">

@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import VerificationBadge from "@/components/VerificationBadge";
+import LogoLoader from "@/components/ui/LogoLoader";
 
 type Caster = {
   id: string;
@@ -69,30 +70,7 @@ export default function CasterProfilePage() {
   }, [id]);
 
   if (loading) {
-    return (
-      <>
-        <Navbar />
-        <main className="pt-24 min-h-screen bg-[var(--bg-light)] pb-20">
-          <div className="max-w-5xl mx-auto px-6 pt-10">
-            <div className="animate-pulse space-y-8">
-              <div className="h-4 w-32 bg-slate-200 rounded"></div>
-              <div className="clay-card-solid p-8 rounded-[2rem]">
-                <div className="flex gap-8">
-                  <div className="w-32 h-32 bg-slate-200 rounded-3xl"></div>
-                  <div className="flex-1 space-y-4">
-                    <div className="h-8 w-48 bg-slate-200 rounded"></div>
-                    <div className="h-4 w-32 bg-slate-200 rounded"></div>
-                    <div className="h-4 w-full bg-slate-200 rounded"></div>
-                    <div className="h-4 w-3/4 bg-slate-200 rounded"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </>
-    );
+    return <LogoLoader fullScreen size="lg" label="Loading Caster Profile..." />;
   }
 
   if (notFound || !caster) {

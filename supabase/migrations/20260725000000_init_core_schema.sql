@@ -1,14 +1,8 @@
--- =========================================
--- YMUTE Platform – Supabase Schema
--- Run this in the Supabase SQL Editor
--- =========================================
-
--- Enable UUID extension (usually already enabled)
+-- Migration: Initial Core Marketplace Schema
+-- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- =========================================
 -- USERS TABLE (extends Supabase auth.users)
--- =========================================
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT UNIQUE,
@@ -28,9 +22,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- =========================================
 -- JOBS TABLE
--- =========================================
 CREATE TABLE IF NOT EXISTS public.jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -49,9 +41,7 @@ CREATE TABLE IF NOT EXISTS public.jobs (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- =========================================
 -- APPLICATIONS TABLE
--- =========================================
 CREATE TABLE IF NOT EXISTS public.applications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id UUID NOT NULL REFERENCES public.jobs(id) ON DELETE CASCADE,
@@ -62,9 +52,7 @@ CREATE TABLE IF NOT EXISTS public.applications (
   UNIQUE(job_id, caster_id)
 );
 
--- =========================================
 -- PAYMENTS TABLE
--- =========================================
 CREATE TABLE IF NOT EXISTS public.payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id UUID NOT NULL REFERENCES public.jobs(id) ON DELETE CASCADE,
@@ -74,9 +62,7 @@ CREATE TABLE IF NOT EXISTS public.payments (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- =========================================
 -- NOTIFICATIONS TABLE
--- =========================================
 CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -85,9 +71,7 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- =========================================
 -- RATINGS TABLE
--- =========================================
 CREATE TABLE IF NOT EXISTS public.ratings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   caster_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -97,9 +81,7 @@ CREATE TABLE IF NOT EXISTS public.ratings (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- =========================================
 -- LEADERBOARD TABLE
--- =========================================
 CREATE TABLE IF NOT EXISTS public.leaderboard (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -108,11 +90,7 @@ CREATE TABLE IF NOT EXISTS public.leaderboard (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- =========================================
 -- ROW LEVEL SECURITY
--- =========================================
-
--- Enable RLS on all tables
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
@@ -154,9 +132,7 @@ CREATE POLICY "Users can submit ratings" ON public.ratings FOR INSERT WITH CHECK
 CREATE POLICY "Anyone can view leaderboards" ON public.leaderboard FOR SELECT USING (true);
 CREATE POLICY "Users can update their own leaderboard score" ON public.leaderboard FOR UPDATE USING (auth.uid() = user_id);
 
--- =========================================
 -- TRIGGER: Auto-insert user profile on signup
--- =========================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -166,7 +142,8 @@ BEGIN
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'role', 'user'),
     COALESCE(NEW.raw_user_meta_data->>'full_name', '')
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

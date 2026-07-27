@@ -6,6 +6,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase";
 import ClayDropdown from "@/components/ClayDropdown";
+import LogoLoader from "@/components/ui/LogoLoader";
+import { Briefcase, RefreshCw, Sparkles } from "lucide-react";
 
 type Job = {
   id: string;
@@ -168,16 +170,31 @@ function ExploreJobsContent() {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {[1,2,3,4,5,6].map((i) => (
-                <div key={i} className="clay-card p-6 rounded-3xl animate-pulse h-64"></div>
-              ))}
+            <div className="min-h-[350px] w-full flex items-center justify-center py-16">
+              <LogoLoader size="lg" label="Searching Available Opportunities..." />
             </div>
           ) : jobs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              <span className="material-symbols-outlined text-primary/30 text-8xl mb-4">work_off</span>
-              <h3 className="text-xl font-bold text-navy/50">No jobs found</h3>
-              <p className="text-navy/30 mt-2">Try adjusting your filters or check back later</p>
+            <div className="clay-card-solid p-10 md:p-14 rounded-[2.5rem] text-center bg-white/90 border border-primary/10 max-w-2xl mx-auto shadow-clay my-4">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mx-auto mb-5 relative">
+                <Briefcase className="w-8 h-8" />
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black flex items-center justify-center border-2 border-white">
+                  0
+                </span>
+              </div>
+              <h3 className="text-2xl font-black text-navy mb-2">No Opportunities Available Right Now</h3>
+              <p className="text-navy/60 font-medium text-sm leading-relaxed max-w-md mx-auto mb-6">
+                There are currently no active casting jobs posted matching your criteria. Check back soon or post a new job listing!
+              </p>
+              <div className="flex justify-center gap-4 flex-wrap">
+                <button onClick={() => { setDomain("All"); setLanguage("All"); setSearch(""); }} className="px-6 py-2.5 rounded-xl bg-navy-deep text-white text-xs font-bold hover:bg-navy transition-all flex items-center gap-2">
+                  <RefreshCw className="w-3.5 h-3.5" /> Clear Filters
+                </button>
+                {user && profile?.role === "company" && (
+                  <Link href="/dashboard/company/post-job" className="px-6 py-2.5 rounded-xl bg-primary text-white text-xs font-bold shadow-clay-primary hover:scale-[1.02] transition-all">
+                    + Post a Job
+                  </Link>
+                )}
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

@@ -37,8 +37,21 @@ export async function GET(req: NextRequest) {
   }
 }
 
+import { checkRateLimit } from "@/lib/rate-limiter";
+
 export async function POST(req: NextRequest) {
   try {
+    // Tier 2 Rate Limit: Max 30 admin actions per minute per IP
+    const rateCheck = checkRateLimit(req, {
+      prefix: "admin_careers",
+      limit: 30,
+      windowMs: 60 * 1000,
+    });
+
+    if (!rateCheck.allowed && rateCheck.response) {
+      return rateCheck.response;
+    }
+
     const user = await requireAdmin(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 

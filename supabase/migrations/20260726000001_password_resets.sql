@@ -1,6 +1,4 @@
 -- Migration: Create password_resets table for OTP verification and password recovery
--- Run this in your Supabase SQL Editor if you haven't already.
-
 CREATE TABLE IF NOT EXISTS public.password_resets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT NOT NULL,
