@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-export const resend = new Resend(process.env.RESEND_API_KEY);
+export const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Domain Subdomain Senders
 export const EMAIL_SENDERS = {
@@ -17,7 +17,7 @@ export async function sendPasswordResetOtp({
   email: string;
   otpCode: string;
 }) {
-  if (!process.env.RESEND_API_KEY) return;
+  if (!resend) return;
   try {
     await resend.emails.send({
       from: EMAIL_SENDERS.AUTH,
@@ -50,7 +50,7 @@ export async function sendWelcomeEmail({
   name: string;
   role: "caster" | "company";
 }) {
-  if (!process.env.RESEND_API_KEY) return;
+  if (!resend) return;
   try {
     const targetUrl = role === "caster" ? "/explore-talent" : "/dashboard/company/post-job";
     const actionLabel = role === "caster" ? "Explore Opportunities" : "Post a Job";
@@ -89,7 +89,7 @@ export async function sendApplicationSubmitted({
   jobTitle: string;
   companyName: string;
 }) {
-  if (!process.env.RESEND_API_KEY) return;
+  if (!resend) return;
   try {
     await resend.emails.send({
       from: EMAIL_SENDERS.NOTIFICATIONS,
@@ -125,7 +125,7 @@ export async function sendCasterHired({
   jobTitle: string;
   companyName: string;
 }) {
-  if (!process.env.RESEND_API_KEY) return;
+  if (!resend) return;
   try {
     await resend.emails.send({
       from: EMAIL_SENDERS.NOTIFICATIONS,
@@ -159,7 +159,7 @@ export async function sendApplicationDeclined({
   casterName: string;
   jobTitle: string;
 }) {
-  if (!process.env.RESEND_API_KEY) return;
+  if (!resend) return;
   try {
     await resend.emails.send({
       from: EMAIL_SENDERS.NOTIFICATIONS,
@@ -191,7 +191,7 @@ export async function sendVerificationApproved({
   companyEmail: string;
   companyName: string;
 }) {
-  if (!process.env.RESEND_API_KEY) return;
+  if (!resend) return;
   try {
     await resend.emails.send({
       from: EMAIL_SENDERS.AUTH,
@@ -228,7 +228,7 @@ export async function sendPaymentReceipt({
   jobTitle: string;
   transactionId: string;
 }) {
-  if (!process.env.RESEND_API_KEY) return;
+  if (!resend) return;
   try {
     await resend.emails.send({
       from: EMAIL_SENDERS.BILLING,
