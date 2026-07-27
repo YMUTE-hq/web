@@ -1,5 +1,5 @@
 import { UserRepository } from "../repositories/UserRepository";
-import { resend, EMAIL_SENDERS } from "@/lib/resend";
+import { getResend, EMAIL_SENDERS } from "@/lib/resend";
 import { getErrorMessage } from "@/types";
 
 export class UserService {
@@ -24,7 +24,7 @@ export class UserService {
       const result = await UserRepository.adminUpdateUser(casterId, { verification_status: isVerified ? "verified" : "rejected" });
       
       if (isVerified && result.email) {
-        await resend.emails.send({
+        await getResend().emails.send({
           from: EMAIL_SENDERS.AUTH,
           to: result.email,
           subject: "Your Profile is Verified!",

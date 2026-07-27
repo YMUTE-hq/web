@@ -1,6 +1,14 @@
 import { Resend } from "resend";
 
-export const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+export function getResend() {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is not configured");
+  }
+
+  return new Resend(apiKey);
+}
 
 // Domain Subdomain Senders
 export const EMAIL_SENDERS = {
@@ -17,9 +25,9 @@ export async function sendPasswordResetOtp({
   email: string;
   otpCode: string;
 }) {
-  if (!resend) return;
+  if (!process.env.RESEND_API_KEY) return;
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: EMAIL_SENDERS.AUTH,
       to: email,
       subject: "Your YMUTE Password Reset Code 🔒",
@@ -50,12 +58,12 @@ export async function sendWelcomeEmail({
   name: string;
   role: "caster" | "company";
 }) {
-  if (!resend) return;
+  if (!process.env.RESEND_API_KEY) return;
   try {
     const targetUrl = role === "caster" ? "/explore-talent" : "/dashboard/company/post-job";
     const actionLabel = role === "caster" ? "Explore Opportunities" : "Post a Job";
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: EMAIL_SENDERS.AUTH,
       to: email,
       subject: "Welcome to YMUTE! 🎙️ Your Voice Deserves a Stage",
@@ -77,7 +85,7 @@ export async function sendWelcomeEmail({
   }
 }
 
-// 3. Application Submitted (Applications / Info)
+// 3. Application Submitted (Applications / Notifications)
 export async function sendApplicationSubmitted({
   casterEmail,
   casterName,
@@ -89,9 +97,9 @@ export async function sendApplicationSubmitted({
   jobTitle: string;
   companyName: string;
 }) {
-  if (!resend) return;
+  if (!process.env.RESEND_API_KEY) return;
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: EMAIL_SENDERS.NOTIFICATIONS,
       to: casterEmail,
       subject: `Application Submitted – ${jobTitle}`,
@@ -113,7 +121,7 @@ export async function sendApplicationSubmitted({
   }
 }
 
-// 4. Caster Hired (Hiring / Info)
+// 4. Caster Hired (Hiring / Notifications)
 export async function sendCasterHired({
   casterEmail,
   casterName,
@@ -125,9 +133,9 @@ export async function sendCasterHired({
   jobTitle: string;
   companyName: string;
 }) {
-  if (!resend) return;
+  if (!process.env.RESEND_API_KEY) return;
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: EMAIL_SENDERS.NOTIFICATIONS,
       to: casterEmail,
       subject: `🎉 You've been hired for ${jobTitle}!`,
@@ -149,7 +157,7 @@ export async function sendCasterHired({
   }
 }
 
-// 5. Application Declined (Applications / Info)
+// 5. Application Declined (Applications / Notifications)
 export async function sendApplicationDeclined({
   casterEmail,
   casterName,
@@ -159,9 +167,9 @@ export async function sendApplicationDeclined({
   casterName: string;
   jobTitle: string;
 }) {
-  if (!resend) return;
+  if (!process.env.RESEND_API_KEY) return;
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: EMAIL_SENDERS.NOTIFICATIONS,
       to: casterEmail,
       subject: `Update on your application for ${jobTitle}`,
@@ -191,9 +199,9 @@ export async function sendVerificationApproved({
   companyEmail: string;
   companyName: string;
 }) {
-  if (!resend) return;
+  if (!process.env.RESEND_API_KEY) return;
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: EMAIL_SENDERS.AUTH,
       to: companyEmail,
       subject: "Your company is now verified on YMUTE ✅",
@@ -214,7 +222,7 @@ export async function sendVerificationApproved({
   }
 }
 
-// 7. Payment Processed Receipt (Payments)
+// 7. Payment Processed Receipt (Billing)
 export async function sendPaymentReceipt({
   email,
   name,
@@ -228,9 +236,9 @@ export async function sendPaymentReceipt({
   jobTitle: string;
   transactionId: string;
 }) {
-  if (!resend) return;
+  if (!process.env.RESEND_API_KEY) return;
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: EMAIL_SENDERS.BILLING,
       to: email,
       subject: `Payment Receipt: ${amount} for ${jobTitle} 💳`,
