@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase-server";
+import { Application, Job } from "@/types";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -24,8 +25,8 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       .single();
     u = res.data;
     error = res.error;
-  } catch (err: any) {
-    error = err;
+  } catch (err: unknown) {
+    error = err as { message: string };
   }
 
   if (error) {
@@ -55,9 +56,8 @@ ALTER TABLE public.users
 
   if (!u) return notFound();
 
-
-  let apps: any[] = [];
-  let jobs: any[] = [];
+  let apps: Partial<Application>[] = [];
+  let jobs: Partial<Job>[] = [];
 
   try {
     // Fetch recent applications if caster
@@ -69,7 +69,7 @@ ALTER TABLE public.users
           .order("created_at", { ascending: false })
           .limit(5)
       : { data: [] };
-    apps = appsRes.data || [];
+    apps = (appsRes.data || []) as unknown as Partial<Application>[];
 
     // Fetch posted jobs if company
     const jobsRes = u.role === "company" && supabase
@@ -283,9 +283,9 @@ ALTER TABLE public.users
                 <Briefcase className="w-4 h-4 text-primary" /> Recent Applications
               </h3>
               <div className="space-y-3">
-                {apps.map((a: any) => (
+                {apps.map((a) => (
                   <div key={a.id} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-700 font-medium line-clamp-1 mr-2">{a.jobs?.title || "—"}</span>
+                    <span className="text-slate-700 font-medium line-clamp-1 mr-2">{a.job?.title || "—"}</span>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0 ${a.status === "accepted" ? "bg-emerald-100 text-emerald-600" : a.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"}`}>
                       {a.status}
                     </span>
@@ -301,7 +301,7 @@ ALTER TABLE public.users
                 <Briefcase className="w-4 h-4 text-primary" /> Posted Jobs
               </h3>
               <div className="space-y-3">
-                {jobs.map((j: any) => (
+                {jobs.map((j) => (
                   <div key={j.id} className="flex items-center justify-between text-sm">
                     <span className="text-slate-700 font-medium line-clamp-1 mr-2">{j.title}</span>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0 ${j.status === "open" ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-600"}`}>

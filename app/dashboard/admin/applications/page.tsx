@@ -1,11 +1,13 @@
 import { AdminService } from "@/backend/services/AdminService";
 import { AdminAppStatusButton, AdminDeleteButton } from "@/components/admin/AdminActions";
 
+import { Application } from "@/types";
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminApplicationsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const params = await searchParams;
-  const applications = await AdminService.getApplications({ status: params.status }) || [];
+  const applications = (await AdminService.getApplications({ status: params.status }) || []) as Application[];
 
   return (
     <main className="flex-1 h-full overflow-y-auto p-8 lg:p-12">
@@ -38,7 +40,7 @@ export default async function AdminApplicationsPage({ searchParams }: { searchPa
               </tr>
             </thead>
             <tbody className="divide-y divide-primary/5">
-              {applications.map((app: any) => (
+              {applications.map((app) => (
                 <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">

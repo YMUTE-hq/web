@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getErrorMessage } from "@/types";
 
-type ApiHandler = (req: NextRequest, context?: any) => Promise<NextResponse>;
+type ApiHandler<T = unknown> = (req: NextRequest, context?: T) => Promise<NextResponse>;
 
-export function apiHandler(handler: ApiHandler): ApiHandler {
-  return async (req: NextRequest, context?: any) => {
+export function apiHandler<T = unknown>(handler: ApiHandler<T>): ApiHandler<T> {
+  return async (req: NextRequest, context?: T) => {
     try {
       return await handler(req, context);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`[API Error] ${req.method} ${req.url}:`, error);
       return NextResponse.json(
-        { error: error.message || "Internal server error" },
+        { error: getErrorMessage(error) },
         { status: 500 }
       );
     }

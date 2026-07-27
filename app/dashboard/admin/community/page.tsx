@@ -2,11 +2,13 @@ import { AdminService } from "@/backend/services/AdminService";
 import { AdminDeleteButton, AdminLeaderboardPoints } from "@/components/admin/AdminActions";
 import { MessageSquare, Star, Trophy } from "lucide-react";
 
+import { RatingItem } from "@/types";
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminCommunityPage() {
-  const posts = await AdminService.getCommunityPosts() || [];
-  const leaderboard = await AdminService.getLeaderboard() || [];
+  const posts = (await AdminService.getCommunityPosts() || []) as (RatingItem & { users?: { full_name: string }; casters?: { full_name: string } })[];
+  const leaderboard = (await AdminService.getLeaderboard() || []) as { id: string; points: number; users?: { full_name: string; email: string } }[];
 
   return (
     <main className="flex-1 h-full overflow-y-auto p-8 lg:p-12">
@@ -24,7 +26,7 @@ export default async function AdminCommunityPage() {
           </h3>
           <div className="clay-card shadow-clay rounded-xl bg-white overflow-hidden">
             <div className="divide-y divide-primary/5">
-              {posts.map((post: any) => (
+              {posts.map((post) => (
                 <div key={post.id} className="p-6 hover:bg-slate-50/50 transition-colors">
                   <div className="flex justify-between items-start mb-3">
                     <div>
@@ -73,7 +75,7 @@ export default async function AdminCommunityPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary/5">
-                {leaderboard.map((entry: any, index: number) => (
+                {leaderboard.map((entry, index: number) => (
                   <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">

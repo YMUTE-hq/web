@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { ChatService } from "@/backend/services/ChatService";
+import { getErrorMessage } from "@/types";
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,13 +19,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Conversation ID required" }, { status: 400 });
     }
 
-    // Attempt to mark as read immediately upon fetching load logs organically
     await ChatService.markAsRead(conversationId, user.id);
 
     const messages = await ChatService.getMessages(conversationId, user.id);
     return NextResponse.json(messages);
-
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

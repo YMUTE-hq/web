@@ -2,13 +2,14 @@ import { AdminService } from "@/backend/services/AdminService";
 import { AdminActionButton } from "@/components/admin/AdminActions";
 import { ShieldCheck } from "lucide-react";
 
+import { UserProfile } from "@/types";
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminVerificationPage() {
-  // Show casters and companies pending verification
-  const allUsers = await AdminService.getUsers() || [];
-  const pending = allUsers.filter((u: any) => !u.is_verified && (u.role === "caster" || u.role === "company"));
-  const verified = allUsers.filter((u: any) => u.is_verified && (u.role === "caster" || u.role === "company"));
+  const allUsers = (await AdminService.getUsers() || []) as UserProfile[];
+  const pending = allUsers.filter((u) => u.verification_status === "pending" && (u.role === "caster" || u.role === "company"));
+  const verified = allUsers.filter((u) => u.verification_status === "verified" && (u.role === "caster" || u.role === "company"));
 
   return (
     <main className="flex-1 h-full overflow-y-auto p-8 lg:p-12">
@@ -30,7 +31,7 @@ export default async function AdminVerificationPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {pending.map((user: any) => (
+            {pending.map((user) => (
               <div key={user.id} className="clay-card shadow-clay rounded-xl bg-white p-6">
                 <div className="flex items-start gap-4 mb-4">
                   <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-black text-sm shrink-0">
@@ -52,8 +53,8 @@ export default async function AdminVerificationPage() {
                           <audio controls className="w-full h-8" src={user.audio_sample_url} />
                         </div>
                       )}
-                      {user.domains?.length > 0 && <p className="text-xs text-slate-500">Domains: {user.domains.join(", ")}</p>}
-                      {user.languages?.length > 0 && <p className="text-xs text-slate-500">Languages: {user.languages.join(", ")}</p>}
+                      {!!(user.domains && user.domains.length > 0) && <p className="text-xs text-slate-500">Domains: {user.domains.join(", ")}</p>}
+                      {!!(user.languages && user.languages.length > 0) && <p className="text-xs text-slate-500">Languages: {user.languages.join(", ")}</p>}
                       {user.bio && <p className="text-xs text-slate-500 line-clamp-2">{user.bio}</p>}
                     </>
                   )}
@@ -85,7 +86,7 @@ export default async function AdminVerificationPage() {
         </h3>
         <div className="clay-card shadow-clay rounded-xl bg-white overflow-hidden">
           <div className="divide-y divide-primary/5">
-            {verified.map((user: any) => (
+            {verified.map((user) => (
               <div key={user.id} className="px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-emerald-500 text-lg">✓</span>

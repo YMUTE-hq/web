@@ -8,13 +8,6 @@ export const createClient = () => {
   }
   return createBrowserClient(
     url || "https://placeholder.supabase.co",
-    key || "placeholder-anon-key",
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: true,
-        detectSessionInUrl: false,
-      },
-    }
+    key || "placeholder-anon-key"
   );
 };

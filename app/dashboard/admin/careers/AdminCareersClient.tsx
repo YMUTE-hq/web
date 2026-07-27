@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { 
-  Briefcase, Plus, Trash2, Edit3, CheckCircle, Eye, EyeOff, 
-  MapPin, Clock, DollarSign, Mail, AlertTriangle, RefreshCw, X, Sparkles 
+  Briefcase, Plus, Trash2, Edit3, Eye, EyeOff, 
+  MapPin, Clock, AlertTriangle, RefreshCw, X 
 } from "lucide-react";
 
 type Career = {
@@ -418,7 +418,7 @@ export default function AdminCareersClient() {
                   <label className="block text-xs font-extrabold uppercase text-slate-500 mb-1">Status</label>
                   <select
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as "open" | "draft" | "closed" })}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-0 text-sm font-semibold"
                   >
                     <option value="open">Open (Publicly Visible)</option>

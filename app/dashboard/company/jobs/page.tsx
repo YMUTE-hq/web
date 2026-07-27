@@ -33,6 +33,7 @@ export default function CompanyJobsPage() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchJobs(); }, [user]);
 
   const toggleStatus = async (job: Job) => {

@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
 import { Save, Loader2 } from "lucide-react";
+import { UserProfile } from "@/types";
 
-export default function AdminUserEditForm({ user }: { user: any }) {
+export default function AdminUserEditForm({ user }: { user: UserProfile }) {
   const [form, setForm] = useState({
     full_name: user.full_name || "",
     bio: user.bio || "",

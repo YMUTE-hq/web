@@ -2,11 +2,13 @@ import { AdminService } from "@/backend/services/AdminService";
 import { AdminActionButton, AdminDeleteButton } from "@/components/admin/AdminActions";
 import { Search, Building2 } from "lucide-react";
 
+import { UserProfile } from "@/types";
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminCompaniesPage({ searchParams }: { searchParams: Promise<{ search?: string }> }) {
   const params = await searchParams;
-  const companies = await AdminService.getCompanies({ search: params.search }) || [];
+  const companies = (await AdminService.getCompanies({ search: params.search }) || []) as UserProfile[];
 
   return (
     <main className="flex-1 h-full overflow-y-auto p-8 lg:p-12">
@@ -37,7 +39,7 @@ export default async function AdminCompaniesPage({ searchParams }: { searchParam
               </tr>
             </thead>
             <tbody className="divide-y divide-primary/5">
-              {companies.map((company: any) => (
+              {companies.map((company) => (
                 <tr key={company.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AdminService } from "@/backend/services/AdminService";
 import { createClient } from "@/lib/supabase-server";
+import { getErrorMessage } from "@/types";
 
-async function requireAdmin(req: NextRequest) {
+async function requireAdmin(_req?: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -22,8 +23,8 @@ export async function DELETE(req: NextRequest) {
 
     await AdminService.deleteCommunityPost(id);
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
 
@@ -37,7 +38,7 @@ export async function PATCH(req: NextRequest) {
 
     await AdminService.updateLeaderboardPoints(id, points);
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

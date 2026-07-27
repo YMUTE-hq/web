@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Briefcase, Code2, Megaphone, Palette, Cpu, Sparkles, 
-  MapPin, Clock, ArrowRight, Mail, CheckCircle2, X, ChevronRight, Building, DollarSign
+  MapPin, Clock, ArrowRight, Mail, X, ChevronRight, Building, DollarSign
 } from "lucide-react";
 
 type Career = {
@@ -192,7 +192,7 @@ export default function CareersClient() {
               <h3 className="text-2xl font-black text-slate-900 mb-3">No Openings Available Right Now</h3>
               
               <p className="text-slate-600 font-medium leading-relaxed max-w-lg mx-auto mb-8">
-                There are currently no active job postings available for YMUTE&apos;s engineering or PR teams. Please check back later as we post new roles regularly.
+                There are currently no active job postings available for YMUTE&apos;s teams. Please check back later as we post new roles regularly.
               </p>
 
               <div className="p-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 max-w-md mx-auto mb-8 text-left">

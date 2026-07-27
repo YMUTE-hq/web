@@ -5,7 +5,7 @@ import NotificationBell from "./NotificationBell";
 import LogoutButton from "./LogoutButton";
 
 export default function Navbar() {
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
 
   return (
     <nav className="fixed top-0 w-full z-50 px-6 py-4 flex justify-center bg-white/80 backdrop-blur-md border-b border-primary/10">

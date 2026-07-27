@@ -55,8 +55,8 @@ export default async function CasterDashboardPage() {
   // Fetch overall application stats for this caster
   const stats = {
     total: allApps?.length || 0,
-    active: allApps?.filter((a: any) => a.status === "pending").length || 0,
-    accepted: allApps?.filter((a: any) => a.status === "accepted").length || 0,
+    active: (allApps as Application[])?.filter((a) => a.status === "pending").length || 0,
+    accepted: (allApps as Application[])?.filter((a) => a.status === "accepted").length || 0,
   };
 
   const statusColor = (s: string) => {

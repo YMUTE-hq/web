@@ -1,5 +1,6 @@
 import { AdminService } from "@/backend/services/AdminService";
-import { Calendar, Plus, TrendingUp, Check, X, Users, Briefcase, Mic, Building2 } from "lucide-react";
+import { Calendar, TrendingUp, Users, Briefcase, Mic, Building2 } from "lucide-react";
+import { Application } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,7 @@ export default async function AdminDashboardOverview() {
               </tr>
             </thead>
             <tbody className="divide-y divide-primary/5">
-              {recentApps.map((app: any) => (
+              {(recentApps as Application[]).map((app) => (
                 <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-3">

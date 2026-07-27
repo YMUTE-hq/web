@@ -11,7 +11,7 @@ export default function CasterSettingsPage() {
 
   // OSM geocoding suggestions states
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<{ name: string }[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [locationQuery, setLocationQuery] = useState("");
   const suggestionRef = useRef<HTMLDivElement>(null);
@@ -58,7 +58,7 @@ export default function CasterSettingsPage() {
         );
         if (res.ok) {
           const data = await res.json();
-          const items = data.map((item: any) => ({
+          const items = data.map((item: { display_name: string }) => ({
             name: item.display_name
           }));
           setSuggestions(items);

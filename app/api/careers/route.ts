@@ -17,8 +17,7 @@ export async function GET() {
     }
 
     return NextResponse.json(data || []);
-  } catch (error: any) {
-    console.warn("[Careers API] Network or server error:", error?.message);
+  } catch {
     return NextResponse.json([]);
   }
 }

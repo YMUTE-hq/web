@@ -21,7 +21,10 @@ export default function DashboardTabWrapper({ children }: { children: React.Reac
 
   // Clear loader when route navigation finishes
   useEffect(() => {
-    setIsTabLoading(false);
+    const timer = requestAnimationFrame(() => {
+      setIsTabLoading(false);
+    });
+    return () => cancelAnimationFrame(timer);
   }, [pathname, searchParams]);
 
   const triggerTabLoading = (label: string = "Loading Content...") => {

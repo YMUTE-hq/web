@@ -1,10 +1,11 @@
 "use client";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { UserProfile } from "@/types";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 import { 
   Mic, Search, Trophy, Headphones, Gamepad2, CircleDot, Mic2, Radio,
@@ -22,11 +23,21 @@ type Job = {
   users: { company_name: string } | null;
 };
 
+interface CommunityVoice {
+  id: string;
+  review?: string | null;
+  users?: {
+    full_name?: string | null;
+    role?: string | null;
+    avatar_url?: string | null;
+  } | null;
+}
+
 export default function LandingPageClient() {
   const { user } = useAuth();
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
-  const [recentCasters, setRecentCasters] = useState<any[]>([]);
-  const [communityVoices, setCommunityVoices] = useState<any[]>([]);
+  const [recentCasters, setRecentCasters] = useState<Partial<UserProfile>[]>([]);
+  const [communityVoices, setCommunityVoices] = useState<CommunityVoice[]>([]);
 
   // Non-blocking async data fetch — page renders immediately, data fills in
   useEffect(() => {
@@ -41,7 +52,7 @@ export default function LandingPageClient() {
           .eq("status", "open")
           .order("created_at", { ascending: false })
           .limit(3);
-        if (data) setRecentJobs(data as any);
+        if (data) setRecentJobs(data as unknown as Job[]);
       } catch {}
     })();
 
@@ -53,7 +64,7 @@ export default function LandingPageClient() {
           .eq("role", "caster")
           .order("created_at", { ascending: false })
           .limit(4);
-        if (data) setRecentCasters(data);
+        if (data) setRecentCasters(data as Partial<UserProfile>[]);
       } catch {}
     })();
 
@@ -65,7 +76,7 @@ export default function LandingPageClient() {
           .not("review", "is", null)
           .order("created_at", { ascending: false })
           .limit(2);
-        if (data) setCommunityVoices(data);
+        if (data) setCommunityVoices(data as unknown as CommunityVoice[]);
       } catch {}
     })();
   }, []);

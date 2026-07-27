@@ -2,15 +2,17 @@ import { AdminService } from "@/backend/services/AdminService";
 import { PaymentActionButton } from "@/components/admin/PaymentActionButton";
 import { CreditCard, IndianRupee } from "lucide-react";
 
+import { Payment } from "@/types";
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminPaymentsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const params = await searchParams;
-  const payments = await AdminService.getPayments({ status: params.status }) || [];
+  const payments = (await AdminService.getPayments({ status: params.status }) || []) as Payment[];
 
   const totalRevenue = payments
-    .filter((p: any) => p.status === "paid")
-    .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+    .filter((p) => p.status === "paid")
+    .reduce((sum: number, p) => sum + (p.amount || 0), 0);
 
   return (
     <main className="flex-1 h-full overflow-y-auto p-8 lg:p-12">
@@ -49,7 +51,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
               </tr>
             </thead>
             <tbody className="divide-y divide-primary/5">
-              {payments.map((payment: any) => (
+              {payments.map((payment) => (
                 <tr key={payment.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">

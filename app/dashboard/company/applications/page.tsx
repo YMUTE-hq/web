@@ -47,6 +47,7 @@ function ApplicationsContent() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchApps(); }, [user, jobId]);
 
   const updateStatus = async (id: string, status: string) => {

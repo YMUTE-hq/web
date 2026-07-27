@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AdminService } from "@/backend/services/AdminService";
 import { createClient } from "@/lib/supabase-server";
+import { getErrorMessage } from "@/types";
 
-async function requireAdmin(req: NextRequest) {
+async function requireAdmin(_req?: NextRequest) {
   try {
     const supabase = await createClient();
     const { data } = await supabase.auth.getUser();
@@ -11,7 +12,7 @@ async function requireAdmin(req: NextRequest) {
     const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
     if (profile?.role !== "admin") return null;
     return user;
-  } catch (error: any) {
+  } catch (error: unknown) {
     throw error;
   }
 }
@@ -24,8 +25,8 @@ export async function GET(req: NextRequest) {
     const filters = { status: searchParams.get("status") || undefined, search: searchParams.get("search") || undefined };
     const jobs = await AdminService.getJobs(filters);
     return NextResponse.json(jobs);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
 
@@ -45,8 +46,8 @@ export async function PATCH(req: NextRequest) {
       default: return NextResponse.json({ error: "Unknown action" }, { status: 400 });
     }
     return NextResponse.json(result);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
 
@@ -59,7 +60,7 @@ export async function DELETE(req: NextRequest) {
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
     await AdminService.deleteJob(id);
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

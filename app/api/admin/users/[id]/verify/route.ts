@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, createClient } from "@/lib/supabase-server";
+import { getErrorMessage } from "@/types";
 
 const VALID_STATUSES = ["unverified", "pending", "verified", "rejected"];
 
-async function requireAdmin(req: NextRequest) {
+async function requireAdmin(_req?: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -36,11 +37,10 @@ export async function POST(
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-    // Redirect back to user detail page
     const url = new URL(req.url);
     const redirectUrl = new URL(`/dashboard/admin/users/${id}`, url.origin);
     return NextResponse.redirect(redirectUrl, { status: 303 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: getErrorMessage(e) }, { status: 500 });
   }
 }

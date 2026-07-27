@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase-server";
 import { validateResetToken, consumeResetToken } from "@/lib/otp-store";
+import { getErrorMessage } from "@/types";
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,11 +18,9 @@ export async function POST(req: NextRequest) {
     const cleanEmail = email.trim().toLowerCase();
     const adminSupabase = createAdminClient();
 
-    // 1. Verify Reset Token against Memory Store
     const memValidation = validateResetToken(cleanEmail, resetToken);
     let tokenIsValid = memValidation.valid;
 
-    // 2. If memory validation failed, check DB backup
     if (!tokenIsValid) {
       const { data: record } = await adminSupabase
         .from("password_resets")
@@ -33,7 +32,6 @@ export async function POST(req: NextRequest) {
 
       if (record && new Date(record.expires_at).getTime() >= Date.now()) {
         tokenIsValid = true;
-        // Invalidate DB record
         await adminSupabase.from("password_resets").update({ used: true }).eq("id", record.id);
       }
     }
@@ -45,7 +43,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Find User ID in users table
     const { data: userProfile } = await adminSupabase
       .from("users")
       .select("id")
@@ -56,7 +53,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User account not found." }, { status: 404 });
     }
 
-    // 4. Update Password in Supabase Auth via Admin Client
     const { error: updateErr } = await adminSupabase.auth.admin.updateUserById(
       userProfile.id,
       { password: newPassword }
@@ -67,17 +63,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
 
-    // Consume Memory Token
     consumeResetToken(cleanEmail);
 
     return NextResponse.json({
       success: true,
       message: "Your password has been updated successfully. You can now log in.",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Reset Password API Error]:", error);
     return NextResponse.json(
-      { error: error?.message || "An unexpected error occurred." },
+      { error: getErrorMessage(error, "An unexpected error occurred.") },
       { status: 500 }
     );
   }

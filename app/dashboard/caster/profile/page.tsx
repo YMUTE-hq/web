@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase";
 
 export default function CasterProfilePage() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const supabase = createClient();
   const [form, setForm] = useState({ full_name: "", bio: "", languages: "", domains: "" });
   const [audioUrl, setAudioUrl] = useState<string>("");
@@ -31,6 +31,7 @@ export default function CasterProfilePage() {
       };
       fetchProfile();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleSave = async (e: React.FormEvent) => {

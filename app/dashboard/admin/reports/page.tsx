@@ -1,17 +1,19 @@
 import { AdminService } from "@/backend/services/AdminService";
-import { TrendingUp, Users, Briefcase, FileText, IndianRupee } from "lucide-react";
+import { Users, Briefcase, FileText, IndianRupee } from "lucide-react";
+
+import { Job, Application } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminReportsPage() {
   const stats = await AdminService.getStats();
-  const jobs = await AdminService.getJobs() || [];
-  const apps = await AdminService.getApplications() || [];
+  const jobs = (await AdminService.getJobs() || []) as Job[];
+  const apps = (await AdminService.getApplications() || []) as Application[];
 
-  const openJobs = jobs.filter((j: any) => j.status === "open").length;
-  const closedJobs = jobs.filter((j: any) => j.status === "closed").length;
-  const pendingApps = apps.filter((a: any) => a.status === "pending").length;
-  const acceptedApps = apps.filter((a: any) => a.status === "accepted").length;
+  const openJobs = jobs.filter((j) => j.status === "open").length;
+  const closedJobs = jobs.filter((j) => j.status === "closed").length;
+  const pendingApps = apps.filter((a) => a.status === "pending").length;
+  const acceptedApps = apps.filter((a) => a.status === "accepted").length;
 
   return (
     <main className="flex-1 h-full overflow-y-auto p-8 lg:p-12">

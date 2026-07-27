@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase-server";
 import crypto from "crypto";
 import { storeOtp } from "@/lib/otp-store";
+import { getErrorMessage } from "@/types";
+import { sendPasswordResetOtp } from "@/lib/resend";
 
 const ipRateLimitMap = new Map<string, { count: number; firstRequestTime: number }>();
 
@@ -78,7 +80,7 @@ export async function POST(req: NextRequest) {
         used: false,
         attempts: 0,
       });
-    } catch (dbErr) {
+    } catch (_dbErr) {
       console.warn("[Password Reset DB Warning]: Using memory store for OTP verification.");
     }
 
@@ -87,15 +89,18 @@ export async function POST(req: NextRequest) {
     console.log(`[VERIFICATION CODE]: ${rawOtp}`);
     console.log(`==============================================\n`);
 
+    // Dispatch OTP Email via auth.noreply@ymute.com
+    await sendPasswordResetOtp({ email: cleanEmail, otpCode: rawOtp });
+
     return NextResponse.json({
       success: true,
       message: "A 6-digit OTP code has been sent to your email.",
       devOtp: process.env.NODE_ENV !== "production" ? rawOtp : undefined,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Forgot Password API Error]:", error);
     return NextResponse.json(
-      { error: error?.message || "An unexpected error occurred." },
+      { error: getErrorMessage(error, "An unexpected error occurred.") },
       { status: 500 }
     );
   }

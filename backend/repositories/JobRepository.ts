@@ -1,7 +1,14 @@
 import { createClient, createAdminClient } from "@/lib/supabase-server";
 
+export interface JobFilters {
+  domain?: string | null;
+  language?: string | null;
+  search?: string | null;
+  limit?: number;
+}
+
 export class JobRepository {
-  static async getOpenJobs(filters: any) {
+  static async getOpenJobs(filters: JobFilters) {
     const supabase = await createClient();
     let query = supabase
       .from("jobs")
@@ -15,8 +22,11 @@ export class JobRepository {
     if (filters.search) query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
 
     const { data, error } = await query;
-    if (error) throw new Error(error.message);
-    return data;
+    if (error) {
+      console.error("[JobRepository getOpenJobs Error]:", error);
+      throw new Error(error.message);
+    }
+    return data || [];
   }
 
   static async getJobById(jobId: string) {
@@ -31,7 +41,7 @@ export class JobRepository {
     return data;
   }
 
-  static async createJob(jobData: any) {
+  static async createJob(jobData: Record<string, unknown>) {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("jobs")

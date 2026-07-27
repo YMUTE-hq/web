@@ -26,7 +26,7 @@ export default function CasterProfilePage() {
   const { id } = useParams<{ id: string }>();
   const { user, profile } = useAuth();
   const [caster, setCaster] = useState<Caster | null>(null);
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<{ id: string; rating: number; review?: string; users?: { avatar_url?: string; full_name?: string }; created_at: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -46,7 +46,7 @@ export default function CasterProfilePage() {
           .single();
 
         if (data) {
-          setCaster(data as any);
+          setCaster(data as unknown as Caster);
           try {
             const { data: r } = await supabase
               .from("ratings")
@@ -54,7 +54,7 @@ export default function CasterProfilePage() {
               .eq("caster_id", data.id)
               .order("created_at", { ascending: false })
               .limit(5);
-            if (r) setReviews(r);
+            if (r) setReviews(r as unknown as typeof reviews);
           } catch {}
         } else {
           setNotFound(true);
@@ -207,7 +207,7 @@ export default function CasterProfilePage() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {reviews.map((r: any) => (
+                    {reviews.map((r: { id: string; rating: number; review?: string; users?: { avatar_url?: string; full_name?: string }; created_at: string }) => (
                       <div key={r.id} className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">

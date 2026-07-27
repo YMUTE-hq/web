@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase-server";
 import { ChatService } from "@/backend/services/ChatService";
 import { checkRateLimit } from "@/lib/rate-limiter";
+import { getErrorMessage } from "@/types";
 
 export async function POST(req: NextRequest) {
   try {
-    // Tier 2 Rate Limit: Max 20 messages per minute per IP
     const rateCheck = checkRateLimit(req, {
       prefix: "chat_send",
       limit: 20,
@@ -32,7 +32,6 @@ export async function POST(req: NextRequest) {
 
     const message = await ChatService.sendMessage(conversationId, user.id, text, mediaUrl);
 
-    // Create in-app notification for the recipient
     const adminSupabase = createAdminClient();
     const { data: members } = await adminSupabase
       .from("conversation_members")
@@ -56,8 +55,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(message);
-
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

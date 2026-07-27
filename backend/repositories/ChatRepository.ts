@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from "@/lib/supabase-server";
+import { createAdminClient } from "@/lib/supabase-server";
 
 export class ChatRepository {
   static async getUserConversations(userId: string) {

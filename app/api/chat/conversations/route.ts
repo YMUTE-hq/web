@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { ChatService } from "@/backend/services/ChatService";
+import { getErrorMessage } from "@/types";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -13,9 +14,8 @@ export async function GET(req: NextRequest) {
 
     const conversations = await ChatService.getUserConversations(user.id);
     return NextResponse.json(conversations);
-
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
 
@@ -37,8 +37,7 @@ export async function POST(req: NextRequest) {
 
     const result = await ChatService.getOrCreateDirectConversation(user.id, targetUserId);
     return NextResponse.json(result);
-
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

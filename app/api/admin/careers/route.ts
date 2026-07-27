@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase-server";
+import { checkRateLimit } from "@/lib/rate-limiter";
+import { getErrorMessage } from "@/types";
 
-async function requireAdmin(req: NextRequest) {
+async function requireAdmin(_req?: NextRequest) {
   try {
     const supabase = await createClient();
     const { data } = await supabase.auth.getUser();
@@ -10,7 +12,7 @@ async function requireAdmin(req: NextRequest) {
     const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
     if (profile?.role !== "admin") return null;
     return user;
-  } catch (error: any) {
+  } catch (error: unknown) {
     throw error;
   }
 }
@@ -27,21 +29,17 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      // Return empty list if table doesn't exist yet
       return NextResponse.json([]);
     }
 
     return NextResponse.json(data || []);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
 
-import { checkRateLimit } from "@/lib/rate-limiter";
-
 export async function POST(req: NextRequest) {
   try {
-    // Tier 2 Rate Limit: Max 30 admin actions per minute per IP
     const rateCheck = checkRateLimit(req, {
       prefix: "admin_careers",
       limit: 30,
@@ -85,7 +83,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(data);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

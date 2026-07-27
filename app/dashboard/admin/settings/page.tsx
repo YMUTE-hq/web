@@ -2,11 +2,13 @@ import { AdminService } from "@/backend/services/AdminService";
 import { AdminSettingToggle, AdminSettingInput } from "@/components/admin/AdminActions";
 import { Settings } from "lucide-react";
 
+import { PlatformSetting } from "@/types";
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
-  const settings = await AdminService.getSettings() || [];
-  const settingsMap = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
+  const settings = (await AdminService.getSettings() || []) as PlatformSetting[];
+  const settingsMap = Object.fromEntries(settings.map((s) => [s.key, s.value]));
 
   const toggleSettings = [
     { key: "registration_enabled", label: "Allow New Registrations", description: "Enable or disable all new user sign-ups" },

@@ -9,7 +9,6 @@ import {
 import { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import LogoLoader from "@/components/ui/LogoLoader";
 
 type UserProfile = {
   id: string;
@@ -33,9 +32,9 @@ type AuthContextType = {
     password: string,
     role: string,
     fullName: string,
-    extraData?: any,
+    extraData?: Record<string, unknown>,
     skipRedirect?: boolean
-  ) => Promise<{ error: string | null; user?: any }>;
+  ) => Promise<{ error: string | null; user?: User | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -121,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       subscription?.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -135,13 +135,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profileData = await fetchProfile(data.user.id);
         const role = profileData?.role || "user";
 
-        if (role === "caster") router.push("/dashboard/caster");
-        else if (role === "company") router.push("/dashboard/company");
-        else if (role === "admin") router.push("/dashboard/admin");
-        else router.push("/dashboard");
+        let targetUrl = "/dashboard";
+        if (role === "caster") targetUrl = "/dashboard/caster";
+        else if (role === "company") targetUrl = "/dashboard/company";
+        else if (role === "admin") targetUrl = "/dashboard/admin";
+
+        window.location.href = targetUrl;
       } catch (e) {
         console.error("Sign in profile fetch error", e);
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
       }
     }
     return { error: null };
@@ -152,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     role: string,
     fullName: string,
-    extraData?: any,
+    extraData?: Record<string, unknown>,
     skipRedirect?: boolean
   ) => {
     const { data: { session } } = await supabase.auth.getSession();

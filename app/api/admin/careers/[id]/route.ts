@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase-server";
+import { getErrorMessage } from "@/types";
 
-async function requireAdmin(req: NextRequest) {
+async function requireAdmin(_req?: NextRequest) {
   try {
     const supabase = await createClient();
     const { data } = await supabase.auth.getUser();
@@ -10,7 +11,7 @@ async function requireAdmin(req: NextRequest) {
     const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
     if (profile?.role !== "admin") return null;
     return user;
-  } catch (error: any) {
+  } catch (error: unknown) {
     throw error;
   }
 }
@@ -41,8 +42,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     return NextResponse.json(data);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
 
@@ -65,7 +66,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

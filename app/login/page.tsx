@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { KeyRound, ShieldCheck, Mail, ArrowLeft, CheckCircle2, Lock, Sparkles, RefreshCw } from "lucide-react";
+import { KeyRound, ShieldCheck, ArrowLeft, CheckCircle2, Lock, Sparkles, RefreshCw } from "lucide-react";
 
 import { useGlobalLoading } from "@/contexts/LoadingContext";
 
@@ -32,7 +32,7 @@ export default function LoginPage() {
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
-    let timer: any;
+    let timer: ReturnType<typeof setInterval>;
     if (cooldown > 0) {
       timer = setInterval(() => setCooldown((c) => c - 1), 1000);
     }
@@ -47,8 +47,13 @@ export default function LoginPage() {
     showLoader("Authenticating & Logging in...");
     try {
       const { error: err } = await signIn(email, password);
-      if (err) setError(err);
-    } finally {
+      if (err) {
+        setError(err);
+        setLoading(false);
+        hideLoader();
+      }
+    } catch {
+      setError("An unexpected error occurred during login.");
       setLoading(false);
       hideLoader();
     }

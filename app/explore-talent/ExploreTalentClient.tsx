@@ -34,7 +34,7 @@ export default function ExploreTalentClient({ initialCasters }: { initialCasters
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [domain, setDomain] = useState(searchParams.get("domain") || "All Domains");
   const [language, setLanguage] = useState(searchParams.get("language") || "");
-  const [minRating, setMinRating] = useState(searchParams.get("rating") || "0");
+  const [_minRating, setMinRating] = useState(searchParams.get("rating") || "0");
 
   const [casters, setCasters] = useState<Caster[]>(initialCasters);
   const [loading, setLoading] = useState(true);
@@ -71,6 +71,7 @@ export default function ExploreTalentClient({ initialCasters }: { initialCasters
 
   useEffect(() => {
     fetchCasters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [domain, language, searchParams]);
 
   // Debouncing search input
@@ -85,6 +86,7 @@ export default function ExploreTalentClient({ initialCasters }: { initialCasters
     }, 400);
 
     return () => clearTimeout(handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
   const applyFilters = (updates: Record<string, string>) => {

@@ -1,32 +1,30 @@
 "use client";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
 import LogoLoader from "@/components/ui/LogoLoader";
 
 export default function DashboardRouter() {
   const { user, profile, loading } = useAuth();
-  const router = useRouter();
 
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        router.push("/login");
+        window.location.href = "/login";
       } else if (profile) {
         if (profile.role === "caster") {
-          router.push("/dashboard/caster");
+          window.location.href = "/dashboard/caster";
         } else if (profile.role === "company") {
-          router.push("/dashboard/company");
+          window.location.href = "/dashboard/company";
         } else if (profile.role === "admin") {
-          router.push("/dashboard/admin");
+          window.location.href = "/dashboard/admin";
         } else {
-          router.push("/");
+          window.location.href = "/";
         }
       } else {
-        router.push("/");
+        window.location.href = "/";
       }
     }
-  }, [user, profile, loading, router]);
+  }, [user, profile, loading]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background-light">

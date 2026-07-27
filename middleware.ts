@@ -50,7 +50,7 @@ export async function middleware(request: NextRequest) {
 
   // Check if there are any Supabase auth cookies at all (handles chunked cookies like sb-xxx-auth-token.0)
   const hasAuthCookies = request.cookies.getAll().some(
-    (c) => c.name.includes("auth-token") || (c.name.startsWith("sb-") && c.name.includes("token"))
+    (c) => c.name.includes("auth") || c.name.includes("token") || c.name.startsWith("sb-")
   );
 
   if (!hasAuthCookies) {
@@ -84,11 +84,6 @@ export async function middleware(request: NextRequest) {
               supabaseResponse.cookies.set(name, value, options)
             );
           },
-        },
-        auth: {
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-          persistSession: false,
         },
         global: {
           fetch: (url, options) => {

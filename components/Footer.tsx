@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mic, Globe, Video, Share2 } from "lucide-react";
+import { Globe, Video, Share2 } from "lucide-react";
 
 export default function Footer() {
   return (

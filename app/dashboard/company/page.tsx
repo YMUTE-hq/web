@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
+import { Job, Application } from "@/types";
+
 export const dynamic = "force-dynamic";
 
 export default async function CompanyDashboardPage() {
@@ -9,8 +11,8 @@ export default async function CompanyDashboardPage() {
   
   let user = null;
   let profile = null;
-  let recentJobs: any[] = [];
-  let apps: any[] = [];
+  let recentJobs: Partial<Job>[] = [];
+  let apps: Partial<Application>[] = [];
 
   try {
     const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -36,7 +38,7 @@ export default async function CompanyDashboardPage() {
       .from("applications")
       .select("id, status, jobs!inner(company_id)")
       .eq("jobs.company_id", user.id);
-    apps = a || [];
+    apps = (a || []) as unknown as Partial<Application>[];
   } catch (error) {
     console.error("Dashboard fetch error:", error);
     redirect("/login");
@@ -45,7 +47,7 @@ export default async function CompanyDashboardPage() {
   const stats = {
     jobs: recentJobs.length,
     applications: apps?.length || 0,
-    hired: apps?.filter((a: any) => a.status === "accepted").length || 0,
+    hired: apps?.filter((a) => a.status === "accepted").length || 0,
   };
 
   return (
@@ -97,7 +99,7 @@ export default async function CompanyDashboardPage() {
               <div key={job.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                 <div>
                   <p className="font-bold text-slate-800">{job.title}</p>
-                  <p className="text-xs text-slate-500">{job.domain} · {new Date(job.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-slate-500">{job.domain} · {job.created_at ? new Date(job.created_at).toLocaleDateString() : "—"}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${job.status === "open" ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-500"}`}>{job.status}</span>

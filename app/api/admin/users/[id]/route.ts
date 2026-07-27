@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient, createClient } from "@/lib/supabase-server";
+import { getErrorMessage } from "@/types";
 
-async function requireAdmin(req: NextRequest) {
+async function requireAdmin(_req?: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -22,7 +23,6 @@ export async function PATCH(
     const body = await req.json();
     const supabase = createAdminClient();
 
-    // Whitelist of editable fields
     const allowed = ["full_name", "bio", "location", "company_name", "role"];
     const updates: Record<string, unknown> = {};
     for (const key of allowed) {
@@ -38,7 +38,7 @@ export async function PATCH(
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ user: data });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: getErrorMessage(e) }, { status: 500 });
   }
 }

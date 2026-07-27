@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { sendCasterHired } from "@/lib/resend";
 import { ChatService } from "@/backend/services/ChatService";
+import { getErrorMessage } from "@/types";
 
 export async function PATCH(
   request: NextRequest,
@@ -17,7 +18,6 @@ export async function PATCH(
     const body = await request.json();
     const { status } = body;
 
-    // Verify company owns this application's job
     const { data: app } = await supabase
       .from("applications")
       .select("job_id, caster_id, jobs(company_id)")
@@ -38,7 +38,6 @@ export async function PATCH(
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // If accepted, reject all others for same job and send email
     if (status === "accepted") {
       await supabase
         .from("applications")
@@ -46,7 +45,6 @@ export async function PATCH(
         .eq("job_id", app.job_id)
         .neq("id", id);
 
-      // Send hired notification
       try {
         const { data: caster } = await supabase
           .from("users")
@@ -67,7 +65,6 @@ export async function PATCH(
             companyName: (job.users as { company_name: string })?.company_name || "Company",
           });
 
-          // Auto-create chat conversation and send welcome message
           try {
             const { conversationId } = await ChatService.getOrCreateDirectConversation(user.id, app.caster_id);
             await ChatService.sendMessage(
@@ -85,7 +82,7 @@ export async function PATCH(
     }
 
     return NextResponse.json(data);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

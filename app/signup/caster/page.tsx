@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
-  Mic, UserPlus, CloudUpload, Play, Trash2, Youtube, Twitch, Link as LinkIcon, 
+  Mic, UserPlus, CloudUpload, Trash2, Youtube, Twitch, 
   ArrowRight, ArrowLeft, CheckCircle, Info, Languages, LayoutGrid, TrendingUp, 
   BookOpen, Plus, PlusCircle, Gamepad2, Trophy, Mic2, FileAudio, Radio
 } from "lucide-react";
@@ -165,7 +165,7 @@ export default function CasterSignupPage() {
                   <UserPlus className="w-8 h-8" />
                 </div>
                 <h1 className="text-3xl font-black text-navy mb-2">Create Your Caster Account</h1>
-                <p className="text-navy/50 font-medium">Step 1: Let's start with your basic information.</p>
+                <p className="text-navy/50 font-medium">Step 1: Let&apos;s start with your basic information.</p>
               </div>
 
               <div className="space-y-8">

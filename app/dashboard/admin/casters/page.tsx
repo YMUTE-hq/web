@@ -1,12 +1,14 @@
 import { AdminService } from "@/backend/services/AdminService";
 import { AdminActionButton, AdminDeleteButton } from "@/components/admin/AdminActions";
-import { Search, Star, Mic } from "lucide-react";
+import { Search, Star } from "lucide-react";
+
+import { UserProfile } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminCastersPage({ searchParams }: { searchParams: Promise<{ search?: string }> }) {
   const params = await searchParams;
-  const casters = await AdminService.getCasters({ search: params.search }) || [];
+  const casters = (await AdminService.getCasters({ search: params.search }) || []) as UserProfile[];
 
   return (
     <main className="flex-1 h-full overflow-y-auto p-8 lg:p-12">
@@ -26,12 +28,12 @@ export default async function AdminCastersPage({ searchParams }: { searchParams:
       </form>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {casters.map((caster: any) => (
+        {casters.map((caster) => (
           <div key={caster.id} className="clay-card shadow-clay rounded-xl bg-white p-6 flex flex-col gap-4">
             <div className="flex items-start gap-4">
               <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-lg font-black text-primary overflow-hidden">
                 {caster.avatar_url ? (
-                  <img src={caster.avatar_url} alt={caster.full_name} className="w-full h-full object-cover" />
+                  <img src={caster.avatar_url} alt={caster.full_name || ""} className="w-full h-full object-cover" />
                 ) : (
                   caster.full_name?.substring(0,2)?.toUpperCase() || "CA"
                 )}
@@ -52,7 +54,7 @@ export default async function AdminCastersPage({ searchParams }: { searchParams:
               </div>
             </div>
 
-            {caster.domains?.length > 0 && (
+            {!!(caster.domains && caster.domains.length > 0) && (
               <div className="flex flex-wrap gap-1">
                 {caster.domains.map((d: string) => (
                   <span key={d} className="px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary rounded-full">{d}</span>
@@ -60,7 +62,7 @@ export default async function AdminCastersPage({ searchParams }: { searchParams:
               </div>
             )}
 
-            {caster.languages?.length > 0 && (
+            {!!(caster.languages && caster.languages.length > 0) && (
               <p className="text-xs text-slate-500">🌐 {caster.languages.join(", ")}</p>
             )}
 
@@ -77,13 +79,13 @@ export default async function AdminCastersPage({ searchParams }: { searchParams:
                 <span className="text-slate-500">Profile Completeness</span>
                 <span className="font-bold text-slate-700">
                   {Math.round(
-                    ([caster.full_name, caster.bio, caster.avatar_url, caster.audio_sample_url, caster.domains?.length > 0, caster.languages?.length > 0]
+                    ([caster.full_name, caster.bio, caster.avatar_url, caster.audio_sample_url, Boolean(caster.domains && caster.domains.length > 0), Boolean(caster.languages && caster.languages.length > 0)]
                       .filter(Boolean).length / 6) * 100
                   )}%
                 </span>
               </div>
               <div className="h-1.5 bg-slate-100 rounded-full">
-                <div className="h-1.5 bg-primary rounded-full" style={{ width: `${Math.round(([caster.full_name, caster.bio, caster.avatar_url, caster.audio_sample_url, caster.domains?.length > 0, caster.languages?.length > 0].filter(Boolean).length / 6) * 100)}%` }} />
+                <div className="h-1.5 bg-primary rounded-full" style={{ width: `${Math.round(([caster.full_name, caster.bio, caster.avatar_url, caster.audio_sample_url, Boolean(caster.domains && caster.domains.length > 0), Boolean(caster.languages && caster.languages.length > 0)].filter(Boolean).length / 6) * 100)}%` }} />
               </div>
             </div>
 

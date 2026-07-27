@@ -2,12 +2,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase";
 import ClayDropdown from "@/components/ClayDropdown";
 import LogoLoader from "@/components/ui/LogoLoader";
-import { Briefcase, RefreshCw, Sparkles } from "lucide-react";
+import { Briefcase, RefreshCw } from "lucide-react";
 
 type Job = {
   id: string;
@@ -30,7 +30,6 @@ const languageOptions = languages.map(l => ({ value: l, label: l }));
 function ExploreJobsContent() {
   const { user, profile } = useAuth();
   const searchParams = useSearchParams();
-  const router = useRouter();
   const supabase = createClient();
 
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -54,25 +53,41 @@ function ExploreJobsContent() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from("jobs")
-        .select("id, title, domain, budget, language, event_date, created_at, status, users!company_id(company_name, verification_status)")
-        .eq("status", "open")
-        .order("created_at", { ascending: false });
+      const params = new URLSearchParams();
+      if (domain && domain !== "All") params.set("domain", domain);
+      if (language && language !== "All") params.set("language", language);
+      if (debouncedSearch) params.set("search", debouncedSearch);
 
-      if (domain && domain !== "All") query = query.eq("domain", domain);
-      if (language && language !== "All") query = query.ilike("language", `%${language}%`);
-      if (debouncedSearch) query = query.or(`title.ilike.%${debouncedSearch}%,description.ilike.%${debouncedSearch}%`);
+      const res = await fetch(`/api/jobs?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setJobs((data as unknown as Job[]) || []);
+      } else {
+        const errBody = await res.text();
+        console.error(`[Explore Jobs /api/jobs Error ${res.status}]:`, errBody);
+        // Fallback to direct client query if API route returns non-200
+        let query = supabase
+          .from("jobs")
+          .select("id, title, domain, budget, language, event_date, created_at, status, users!company_id(company_name, verification_status)")
+          .eq("status", "open")
+          .order("created_at", { ascending: false });
 
-      const { data } = await query;
-      setJobs((data as unknown as Job[]) || []);
-    } catch {
+        if (domain && domain !== "All") query = query.eq("domain", domain);
+        if (language && language !== "All") query = query.ilike("language", `%${language}%`);
+        if (debouncedSearch) query = query.or(`title.ilike.%${debouncedSearch}%,description.ilike.%${debouncedSearch}%`);
+
+        const { data } = await query;
+        setJobs((data as unknown as Job[]) || []);
+      }
+    } catch (err) {
+      console.error("[Explore Jobs]: Error fetching jobs", err);
       setJobs([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchJobs(); }, [domain, language, debouncedSearch]);
 
   const handleSearch = (e: React.FormEvent) => {

@@ -1,6 +1,7 @@
 import { ChatService } from "../services/ChatService";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { getErrorMessage } from "@/types";
 
 export class ChatController {
   static async createConversation(req: Request) {
@@ -23,8 +24,8 @@ export class ChatController {
 
       const conversationId = await ChatService.createConversation(type, userIds, jobId);
       return NextResponse.json({ conversationId }, { status: 201 });
-    } catch (e: any) {
-      return NextResponse.json({ error: e.message }, { status: 500 });
+    } catch (e: unknown) {
+      return NextResponse.json({ error: getErrorMessage(e) }, { status: 500 });
     }
   }
 }

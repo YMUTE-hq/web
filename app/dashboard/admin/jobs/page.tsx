@@ -1,12 +1,14 @@
 import { AdminService } from "@/backend/services/AdminService";
 import { AdminJobActionButton, AdminDeleteButton } from "@/components/admin/AdminActions";
-import { Search, IndianRupee, Globe, Flag } from "lucide-react";
+import { Search, IndianRupee, Flag } from "lucide-react";
+
+import { Job } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminJobsPage({ searchParams }: { searchParams: Promise<{ status?: string; search?: string }> }) {
   const params = await searchParams;
-  const jobs = await AdminService.getJobs({ status: params.status, search: params.search }) || [];
+  const jobs = (await AdminService.getJobs({ status: params.status, search: params.search }) || []) as Job[];
 
   return (
     <main className="flex-1 h-full overflow-y-auto p-8 lg:p-12">
@@ -43,7 +45,7 @@ export default async function AdminJobsPage({ searchParams }: { searchParams: Pr
               </tr>
             </thead>
             <tbody className="divide-y divide-primary/5">
-              {jobs.map((job: any) => (
+              {jobs.map((job) => (
                 <tr key={job.id} className={`hover:bg-slate-50/50 transition-colors ${job.flagged ? "bg-rose-50" : ""}`}>
                   <td className="px-6 py-4">
                     <div>

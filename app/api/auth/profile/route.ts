@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 
+import { getErrorMessage } from "@/types";
+
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -24,7 +26,7 @@ export async function GET() {
     }
 
     return NextResponse.json(profile);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

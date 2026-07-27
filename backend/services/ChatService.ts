@@ -1,23 +1,38 @@
 import { ChatRepository } from "../repositories/ChatRepository";
-import { createClient, createAdminClient } from "@/lib/supabase-server";
+import { createAdminClient } from "@/lib/supabase-server";
+
+import { ChatMessage, UserProfile } from "@/types";
+
+interface RawMember {
+  user_id: string;
+  users: UserProfile;
+}
+
+interface RawConv {
+  id: string;
+  type: "direct" | "job" | "support";
+  created_at: string;
+  conversation_members: RawMember[];
+  messages?: ChatMessage[];
+}
 
 export class ChatService {
   static async getUserConversations(userId: string) {
-    const rawConversations = await ChatRepository.getUserConversations(userId);
+    const rawConversations = (await ChatRepository.getUserConversations(userId)) as unknown as RawConv[];
 
-    return rawConversations.map((conv: any) => {
+    return rawConversations.map((conv) => {
       const others = conv.conversation_members
-        .filter((m: any) => m.user_id !== userId)
-        .map((m: any) => m.users);
+        .filter((m) => m.user_id !== userId)
+        .map((m) => m.users);
 
       const otherUser = others.length > 0 ? others[0] : null;
 
       const lastMessage = conv.messages && conv.messages.length > 0 
-        ? conv.messages.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+        ? conv.messages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
         : null;
 
       const unreadCount = conv.messages
-        ? conv.messages.filter((m: any) => !m.seen && m.sender_id !== userId).length
+        ? conv.messages.filter((m) => !m.seen && m.sender_id !== userId).length
         : 0;
 
       return {

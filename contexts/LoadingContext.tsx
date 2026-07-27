@@ -26,6 +26,16 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, [pathname, searchParams]);
 
+  // Safety net: Auto-dismiss loader after 5 seconds to prevent frozen spinners
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
+
   const showLoader = (label: string = "Processing...") => {
     setLoadingLabel(label);
     setIsLoading(true);

@@ -3,15 +3,17 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase";
-import { X, MessageSquare, Send, Paperclip, MoreVertical, Loader2 } from "lucide-react";
+import { X, MessageSquare, Send, Paperclip, Loader2 } from "lucide-react";
+
+import { Conversation, ChatMessage } from "@/types";
 
 export default function ChatWidget() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const supabase = createClient();
   const [isOpen, setIsOpen] = useState(false);
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [activeConversation, setActiveConversation] = useState<any | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -32,7 +34,7 @@ export default function ChatWidget() {
           setConversations(data);
         }
       } catch (err) {
-        console.error("Error fetching conversations:", err);
+        console.error(err);
       }
     };
     fetchConversations();
@@ -60,7 +62,7 @@ export default function ChatWidget() {
           schema: "public",
           table: "messages",
         },
-        (payload: any) => {
+        (payload: { new: ChatMessage }) => {
           const newMessage = payload.new;
           if (newMessage.sender_id !== user.id) {
             setConversations((currentConvs) => {
@@ -149,7 +151,7 @@ export default function ChatWidget() {
           table: "messages",
           filter: `conversation_id=eq.${activeConversation.id}`,
         },
-        (payload: any) => {
+        (payload: { new: ChatMessage }) => {
           const newMessage = payload.new;
           // Only append if it's not our own message (we optimistically append our own)
           if (newMessage.sender_id !== user.id) {
@@ -195,7 +197,7 @@ export default function ChatWidget() {
       created_at: new Date().toISOString(),
       seen: false,
     };
-    setMessages((prev) => [...prev, tempMessage]);
+    setMessages((prev) => [...prev, tempMessage as ChatMessage]);
     scrollToBottom();
 
     try {
@@ -286,7 +288,7 @@ export default function ChatWidget() {
                           alt="avatar" 
                           className="w-12 h-12 rounded-xl object-cover" 
                         />
-                        {conv.unreadCount > 0 && (
+                        {!!(conv.unreadCount && conv.unreadCount > 0) && (
                           <span className="absolute -top-1 -right-1 bg-red-500 w-3 h-3 rounded-full border-2 border-white"></span>
                         )}
                       </div>
@@ -299,7 +301,7 @@ export default function ChatWidget() {
                             {conv.lastMessage ? new Date(conv.lastMessage.created_at).toLocaleDateString() : ""}
                           </span>
                         </div>
-                        <p className={`text-xs truncate ${conv.unreadCount > 0 ? "text-slate-900 font-bold" : "text-slate-500"}`}>
+                        <p className={`text-xs truncate ${(conv.unreadCount || 0) > 0 ? "text-slate-900 font-bold" : "text-slate-500"}`}>
                           {conv.lastMessage ? conv.lastMessage.message_text : "Started a conversation"}
                         </p>
                       </div>
@@ -320,7 +322,7 @@ export default function ChatWidget() {
                     <Loader2 className="w-6 h-6 text-primary animate-spin" />
                   </div>
                 ) : (
-                  messages.map((msg, idx) => {
+                  messages.map((msg) => {
                     const isMe = msg.sender_id === user.id;
                     return (
                       <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>

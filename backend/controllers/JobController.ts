@@ -1,5 +1,6 @@
 import { JobService } from "../services/JobService";
 import { NextResponse } from "next/server";
+import { getErrorMessage } from "@/types";
 
 export class JobController {
   static async getJobs(req: Request) {
@@ -14,21 +15,23 @@ export class JobController {
 
       const jobs = await JobService.getOpenJobs(filters);
       return NextResponse.json(jobs, { status: 200 });
-    } catch (e: any) {
-      return NextResponse.json({ error: e.message }, { status: 500 });
+    } catch (e: unknown) {
+      console.error("[JobController GET /api/jobs Error]:", e);
+      return NextResponse.json({ error: getErrorMessage(e) }, { status: 500 });
     }
   }
 
-  static async createJob(req: Request, user: any) {
+  static async createJob(req: Request, user: { id: string; [key: string]: unknown }) {
     try {
       const body = await req.json();
       const newJob = await JobService.createJob(user, body);
       return NextResponse.json(newJob, { status: 201 });
-    } catch (e: any) {
-      if (e.message.includes("Only companies")) {
-        return NextResponse.json({ error: e.message }, { status: 403 });
+    } catch (e: unknown) {
+      const msg = getErrorMessage(e);
+      if (msg.includes("Only companies")) {
+        return NextResponse.json({ error: msg }, { status: 403 });
       }
-      return NextResponse.json({ error: e.message }, { status: 500 });
+      return NextResponse.json({ error: msg }, { status: 500 });
     }
   }
 
@@ -37,8 +40,8 @@ export class JobController {
     try {
       const jobs = await JobService.adminGetJobs();
       return NextResponse.json(jobs, { status: 200 });
-    } catch (e: any) {
-      return NextResponse.json({ error: e.message }, { status: 500 });
+    } catch (e: unknown) {
+      return NextResponse.json({ error: getErrorMessage(e) }, { status: 500 });
     }
   }
 
@@ -50,8 +53,8 @@ export class JobController {
 
       const job = await JobService.adminApproveJob(id);
       return NextResponse.json(job, { status: 200 });
-    } catch (e: any) {
-      return NextResponse.json({ error: e.message }, { status: 500 });
+    } catch (e: unknown) {
+      return NextResponse.json({ error: getErrorMessage(e) }, { status: 500 });
     }
   }
 }

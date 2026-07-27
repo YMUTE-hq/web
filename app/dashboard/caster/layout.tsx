@@ -9,7 +9,7 @@ import LogoutButton from "@/components/LogoutButton";
 import DashboardTabWrapper from "@/components/DashboardTabWrapper";
 
 export default function CasterDashboardLayout({ children }: { children: ReactNode }) {
-  const { profile, loading, signOut } = useAuth();
+  const { profile, loading } = useAuth();
   const pathname = usePathname();
 
   const navItems = [

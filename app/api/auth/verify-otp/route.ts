@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase-server";
 import { verifyOtpCode } from "@/lib/otp-store";
 import crypto from "crypto";
+import { getErrorMessage } from "@/types";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +25,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // If memory store returned a specific failure error (expired, max attempts), return it
     if (memResult.error && !memResult.error.includes("No active OTP request")) {
       return NextResponse.json({ error: memResult.error }, { status: 400 });
     }
@@ -87,10 +87,10 @@ export async function POST(req: NextRequest) {
       resetToken,
       message: "OTP verified successfully. Please set your new password.",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Verify OTP API Error]:", error);
     return NextResponse.json(
-      { error: error?.message || "An unexpected error occurred." },
+      { error: getErrorMessage(error, "An unexpected error occurred.") },
       { status: 500 }
     );
   }

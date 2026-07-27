@@ -32,7 +32,7 @@ export class UserRepository {
   }
 
   // Method to manually update a user's record via Admin permissions
-  static async adminUpdateUser(userId: string, updates: any) {
+  static async adminUpdateUser(userId: string, updates: Record<string, unknown>) {
     const supabaseAdmin = createAdminClient();
     const { data, error } = await supabaseAdmin
       .from("users")

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
 import { 
   LayoutDashboard, Users, Mic, Building2, Briefcase, 
-  FileText, CreditCard, ShieldCheck, BarChart3, Settings, LogOut, MessageSquare
+  FileText, CreditCard, ShieldCheck, BarChart3, Settings, MessageSquare
 } from "lucide-react";
 
 export default function AdminSidebar() {

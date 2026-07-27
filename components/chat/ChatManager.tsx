@@ -2,42 +2,11 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase";
+import { Conversation, ChatMessage as Message } from "@/types";
 
-type UserProfile = {
-  id: string;
-  full_name: string;
-  company_name?: string;
-  avatar_url?: string;
-  role: string;
-};
-
-type ConversationMember = {
-  user_id: string;
-  role: string;
-  users: UserProfile;
-};
-
-type Conversation = {
-  id: string;
-  type: string;
-  created_at: string;
-  participant: UserProfile | null;
-  lastMessage?: Message | null;
-  unreadCount?: number;
-};
-
-type Message = {
-  id: string;
-  conversation_id: string;
-  sender_id: string;
-  message_text: string;
-  media_url?: string;
-  seen: boolean;
-  created_at: string;
-};
 
 export default function ChatManager() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const supabase = useMemo(() => createClient(), []);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeChat, setActiveChat] = useState<Conversation | null>(null);
@@ -88,7 +57,7 @@ export default function ChatManager() {
                 if (refreshRes.ok) {
                   const data = await refreshRes.json();
                   setConversations(data);
-                  const newChat = data.find((c: any) => c.id === conversationId);
+                  const newChat = data.find((c: Conversation) => c.id === conversationId);
                   if (newChat) {
                     setActiveChat(newChat);
                     fetchMessages(conversationId);
@@ -104,6 +73,7 @@ export default function ChatManager() {
         }
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversations, loadingConversations]);
 
   // Subscribe to real-time updates for the active stream or conversation
@@ -142,6 +112,7 @@ export default function ChatManager() {
     return () => {
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeChat, supabase]);
 
   useEffect(() => {

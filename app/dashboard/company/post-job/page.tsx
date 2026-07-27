@@ -92,6 +92,7 @@ export default function PostJobPage() {
         setLocationQuery("");
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventMode]);
 
   // Geocoding query effect
@@ -115,7 +116,7 @@ export default function PostJobPage() {
         );
         if (res.ok) {
           const data = await res.json();
-          const items = data.map((item: any) => ({
+          const items = data.map((item: { display_name: string }) => ({
             name: item.display_name
           }));
           setSuggestions(items);
