@@ -57,9 +57,9 @@ export default function NotificationBell() {
           table: "notifications",
           filter: `user_id=eq.${user.id}`,
         },
-        (payload) => {
+        (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
           if (payload.eventType === "INSERT") {
-            const newNotif = payload.new as Notification;
+            const newNotif = payload.new as unknown as Notification;
             setNotifications((prev) => [newNotif, ...prev.filter((n) => n.id !== newNotif.id)]);
           } else if (payload.eventType === "UPDATE") {
             const updated = payload.new as Notification;

@@ -90,8 +90,8 @@ export default function ChatManager() {
           table: "messages",
           filter: `conversation_id=eq.${activeChat.id}`,
         },
-        (payload) => {
-          const newMessage = payload.new as Message;
+        (payload: { new: Record<string, unknown> }) => {
+          const newMessage = payload.new as unknown as Message;
           if (newMessage.sender_id !== user?.id) {
             setMessages((current) => {
               if (current.some((m) => m.id === newMessage.id)) return current;

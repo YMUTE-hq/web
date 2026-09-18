@@ -11,7 +11,7 @@ export default function CompanySettingsPage() {
 
   useEffect(() => {
     if (user) {
-      supabase.from("users").select("full_name").eq("id", user.id).single().then(({ data }) => {
+      supabase.from("users").select("full_name").eq("id", user.id).single().then(({ data }: { data: { full_name: string | null } | null }) => {
         if (data) setFullName(data.full_name || "");
       });
     }

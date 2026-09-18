@@ -60,7 +60,7 @@ export default function PostJobPage() {
           .limit(50);
         
         if (data) {
-          const unique = Array.from(new Set(data.map((j) => j.location).filter(Boolean)));
+          const unique = Array.from(new Set((data as Array<{ location: string | null }>).map((j) => j.location).filter((loc): loc is string => Boolean(loc))));
           setPopularLocations(unique);
         }
       } catch (err) {

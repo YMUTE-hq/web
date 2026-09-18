@@ -8,6 +8,7 @@ import {
   ArrowRight, ArrowLeft, CheckCircle, Info, Languages, LayoutGrid, TrendingUp, 
   BookOpen, Plus, PlusCircle, Gamepad2, Trophy, Mic2, FileAudio, Radio
 } from "lucide-react";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 export default function CasterSignupPage() {
   const { signUp } = useAuth();
@@ -190,10 +191,22 @@ export default function CasterSignupPage() {
                   </div>
                 </div>
 
-                <div className="pt-8 flex justify-center">
-                  <button onClick={handleNext} className="clay-btn-primary min-w-[240px] h-14 rounded-2xl font-black text-white text-lg flex items-center justify-center gap-2 group transition-transform hover:scale-105" type="button">
-                    Continue <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <div className="pt-8 flex flex-col items-center gap-4 max-w-sm mx-auto">
+                  <button onClick={handleNext} className="clay-btn-primary w-full h-14 rounded-2xl font-black text-white text-lg flex items-center justify-center gap-2 group transition-transform hover:scale-[1.02] active:scale-[0.98]" type="button">
+                    Continue with Email <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </button>
+
+                  <div className="relative my-2 w-full flex items-center justify-center">
+                    <div className="border-t border-slate-200/80 w-full" />
+                    <span className="bg-white/95 px-3 text-xs font-bold text-navy/40 uppercase tracking-wider relative">
+                      Or sign up with
+                    </span>
+                  </div>
+
+                  <GoogleSignInButton
+                    role="caster"
+                    label="Sign up as Caster with Google"
+                  />
                 </div>
               </div>
             </div>

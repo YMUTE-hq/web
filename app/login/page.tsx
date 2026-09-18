@@ -5,6 +5,7 @@ import Link from "next/link";
 import { KeyRound, ShieldCheck, ArrowLeft, CheckCircle2, Lock, Sparkles, RefreshCw } from "lucide-react";
 
 import { useGlobalLoading } from "@/contexts/LoadingContext";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 type AuthMode = "login" | "forgot_email" | "forgot_otp" | "forgot_reset" | "forgot_success";
 
@@ -60,6 +61,7 @@ export default function LoginPage() {
   };
 
   const [notRegistered, setNotRegistered] = useState(false);
+  const [isOAuthAccount, setIsOAuthAccount] = useState(false);
 
   // 2. Request OTP Code
   const handleRequestOtp = async (e: React.FormEvent) => {
@@ -67,6 +69,7 @@ export default function LoginPage() {
     setError("");
     setSuccessMsg("");
     setNotRegistered(false);
+    setIsOAuthAccount(false);
 
     if (!forgotEmail || !forgotEmail.includes("@")) {
       setError("Please enter a valid email address.");
@@ -87,6 +90,9 @@ export default function LoginPage() {
         if (data.notRegistered) {
           setNotRegistered(true);
         }
+      } else if (data.isOAuth) {
+        setSuccessMsg(data.message || "Your account is linked with Google. We sent an email notification.");
+        setIsOAuthAccount(true);
       } else {
         setSuccessMsg(data.message || "OTP code sent to your email.");
         if (data.devOtp) setDevOtpHint(data.devOtp);
@@ -297,6 +303,15 @@ export default function LoginPage() {
                     >
                       {loading ? "Logging in..." : "Login to Dashboard"}
                     </button>
+
+                    <div className="relative my-4 flex items-center justify-center">
+                      <div className="border-t border-slate-200/80 w-full" />
+                      <span className="bg-white/95 px-3 text-xs font-bold text-navy/40 uppercase tracking-wider relative">
+                        Or continue with
+                      </span>
+                    </div>
+
+                    <GoogleSignInButton label="Continue with Google" />
                   </form>
                 )}
 
@@ -313,29 +328,40 @@ export default function LoginPage() {
                       </p>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-navy/60 text-sm font-bold ml-2">Registered Email Address</label>
-                      <input
-                        className="w-full h-14 rounded-2xl clay-input px-6 text-navy font-semibold outline-none focus:ring-2 focus:ring-primary/20"
-                        placeholder="alex@example.com"
-                        type="email"
-                        value={forgotEmail}
-                        onChange={(e) => setForgotEmail(e.target.value)}
-                        required
-                      />
-                    </div>
+                    {isOAuthAccount ? (
+                      <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col gap-4 text-center">
+                        <p className="text-sm text-navy/80 font-bold">
+                          Your account is registered using Google Sign-In. You can sign in immediately without needing a password:
+                        </p>
+                        <GoogleSignInButton label="Continue with Google" />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          <label className="text-navy/60 text-sm font-bold ml-2">Registered Email Address</label>
+                          <input
+                            className="w-full h-14 rounded-2xl clay-input px-6 text-navy font-semibold outline-none focus:ring-2 focus:ring-primary/20"
+                            placeholder="alex@example.com"
+                            type="email"
+                            value={forgotEmail}
+                            onChange={(e) => setForgotEmail(e.target.value)}
+                            required
+                          />
+                        </div>
 
-                    <button
-                      className="w-full h-14 rounded-2xl clay-button-primary text-white font-extrabold text-base shadow-clay-btn transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
-                      type="submit"
-                      disabled={loading}
-                    >
-                      {loading ? "Sending OTP Code..." : "Send Verification OTP Code"}
-                    </button>
+                        <button
+                          className="w-full h-14 rounded-2xl clay-button-primary text-white font-extrabold text-base shadow-clay-btn transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
+                          type="submit"
+                          disabled={loading}
+                        >
+                          {loading ? "Sending OTP Code..." : "Send Verification OTP Code"}
+                        </button>
+                      </>
+                    )}
 
                     <button
                       type="button"
-                      onClick={() => { setMode("login"); setError(""); setSuccessMsg(""); }}
+                      onClick={() => { setMode("login"); setError(""); setSuccessMsg(""); setIsOAuthAccount(false); }}
                       className="w-full text-center text-xs font-bold text-slate-500 hover:text-primary transition-colors flex items-center justify-center gap-1 cursor-pointer"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" /> Back to Login

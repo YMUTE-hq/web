@@ -15,7 +15,7 @@ type Application = {
 };
 
 function ApplicationsContent() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const supabase = createClient();
   const searchParams = useSearchParams();
   const jobId = searchParams.get("job_id");
@@ -24,7 +24,11 @@ function ApplicationsContent() {
   const [processing, setProcessing] = useState<string | null>(null);
 
   const fetchApps = async () => {
-    if (!user) return;
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     try {
       let query = supabase
         .from("applications")
@@ -34,8 +38,12 @@ function ApplicationsContent() {
       if (jobId) query = query.eq("job_id", jobId);
       else {
         const { data: jobs } = await supabase.from("jobs").select("id").eq("company_id", user.id);
-        const jobIds = jobs?.map((j) => j.id) || [];
-        if (jobIds.length === 0) { setApplications([]); return; }
+        const jobIds = (jobs as Array<{ id: string }> | null)?.map((j) => j.id) || [];
+        if (jobIds.length === 0) {
+          setApplications([]);
+          setLoading(false);
+          return;
+        }
         query = query.in("job_id", jobIds);
       }
       const { data } = await query;
@@ -48,7 +56,7 @@ function ApplicationsContent() {
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchApps(); }, [user, jobId]);
+  useEffect(() => { fetchApps(); }, [user, jobId, authLoading]);
 
   const updateStatus = async (id: string, status: string) => {
     setProcessing(id);
