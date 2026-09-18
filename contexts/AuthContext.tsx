@@ -6,7 +6,7 @@ import {
   useState,
   ReactNode,
 } from "react";
-import { User } from "@supabase/supabase-js";
+import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -79,21 +79,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const initAuth = async () => {
       try {
-        // Race getSession against a 3-second timeout.
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise<null>((resolve) =>
-          setTimeout(() => resolve(null), 3000)
-        );
+        const { data, error } = await supabase.auth.getSession();
 
-        const result = await Promise.race([sessionPromise, timeoutPromise]);
-
-        if (mounted && result && 'data' in result) {
-          const session = result.data?.session;
-          setUser(session?.user ?? null);
-          if (session?.user) await fetchProfile(session.user.id);
+        if (error) {
+          if (error.message?.includes("Refresh Token") || error.message?.includes("invalid")) {
+            await supabase.auth.signOut().catch(() => {});
+          }
+          if (mounted) {
+            setUser(null);
+            setProfile(null);
+          }
+          return;
         }
-      } catch (e) {
-        console.error("Auth init failed:", e);
+
+        const session = data?.session;
+        if (mounted) {
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          } else {
+            setProfile(null);
+          }
+        }
+      } catch (e: unknown) {
+        const errorMsg = e instanceof Error ? e.message : String(e);
+        if (errorMsg.includes("Refresh Token") || errorMsg.includes("invalid")) {
+          await supabase.auth.signOut().catch(() => {});
+        }
+        if (mounted) {
+          setUser(null);
+          setProfile(null);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -104,11 +120,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let subscription: { unsubscribe: () => void } | null = null;
     try {
       const { data } = supabase.auth.onAuthStateChange(
-        async (_event, session) => {
+        async (event: AuthChangeEvent, session: Session | null) => {
           if (!mounted) return;
-          setUser(session?.user ?? null);
-          if (session?.user) await fetchProfile(session.user.id);
-          else setProfile(null);
+          if (event === "SIGNED_OUT" || !session) {
+            setUser(null);
+            setProfile(null);
+          } else if (session?.user) {
+            setUser(session.user);
+            await fetchProfile(session.user.id);
+          }
         }
       );
       subscription = data.subscription;

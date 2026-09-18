@@ -20,7 +20,7 @@ export default function CompanyProfilePage() {
 
   useEffect(() => {
     if (user) {
-      supabase.from("users").select("*").eq("id", user.id).single().then(({ data }) => {
+      supabase.from("users").select("*").eq("id", user.id).single().then(({ data }: { data: Record<string, string | null> | null }) => {
         if (data) {
           setForm({
             company_name: data.company_name || "",

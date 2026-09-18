@@ -15,13 +15,17 @@ type Job = {
 };
 
 export default function CompanyJobsPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const supabase = createClient();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchJobs = async () => {
-    if (!user) return;
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     try {
       const { data } = await supabase.from("jobs").select("id, title, domain, status, budget, event_date, created_at")
         .eq("company_id", user.id).order("created_at", { ascending: false });
@@ -34,7 +38,7 @@ export default function CompanyJobsPage() {
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchJobs(); }, [user]);
+  useEffect(() => { fetchJobs(); }, [user, authLoading]);
 
   const toggleStatus = async (job: Job) => {
     const newStatus = job.status === "open" ? "closed" : "open";
