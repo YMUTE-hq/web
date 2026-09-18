@@ -48,7 +48,46 @@ export async function sendPasswordResetOtp({
   }
 }
 
-// 2. Account Welcome Email (Auth)
+// 2. OAuth Account Notification (Auth)
+export async function sendOAuthAccountNotification({
+  email,
+  name,
+  provider = "Google",
+}: {
+  email: string;
+  name?: string;
+  provider?: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ymute.com";
+    await getResend().emails.send({
+      from: EMAIL_SENDERS.AUTH,
+      to: email,
+      subject: `Security Notice: Sign in to YMUTE with ${provider} 🔐`,
+      html: `
+        <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fdfcf0;padding:40px;border-radius:16px;border:1px solid rgba(200,161,55,0.2);">
+          <h2 style="color:#001F3F;margin-top:0;">Sign-In Notice</h2>
+          <p style="color:#1F3A5F;font-size:15px;">Hi ${name || "there"},</p>
+          <p style="color:#1F3A5F;font-size:15px;">We received a login or password reset request for your YMUTE account.</p>
+          <p style="color:#1F3A5F;font-size:15px;">Your account is registered using <strong>${provider} Sign-In</strong>, which means you do not have a password and can log in with 1 click.</p>
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${appUrl}/login" 
+               style="display:inline-block;background:#001F3F;color:#ffffff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:15px;box-shadow:0 4px 12px rgba(0,31,63,0.15);">
+              Continue with ${provider}
+            </a>
+          </div>
+          <p style="color:#64748b;font-size:13px;line-height:1.5;">If you did not initiate this request, your account remains secure and no action is required.</p>
+          <p style="color:#94a3b8;font-size:12px;margin-top:28px;border-top:1px solid #e2e8f0;padding-top:16px;">© ${new Date().getFullYear()} YMUTE. All rights reserved.</p>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error("[Resend sendOAuthAccountNotification Error]:", err);
+  }
+}
+
+// 3. Account Welcome Email (Auth)
 export async function sendWelcomeEmail({
   email,
   name,

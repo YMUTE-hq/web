@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase-server";
 import crypto from "crypto";
 import { storeOtp } from "@/lib/otp-store";
 import { getErrorMessage } from "@/types";
-import { sendPasswordResetOtp } from "@/lib/resend";
+import { sendPasswordResetOtp, sendOAuthAccountNotification } from "@/lib/resend";
 
 const ipRateLimitMap = new Map<string, { count: number; firstRequestTime: number }>();
 
@@ -67,7 +67,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Generate Cryptographically Secure 6-digit OTP
+    // 2. Check if user is registered purely via OAuth (Google)
+    try {
+      const { data: authUserData } = await adminSupabase.auth.admin.getUserById(userProfile.id);
+      const authUser = authUserData?.user;
+      const identities = authUser?.identities || [];
+      const hasPasswordAuth = identities.some((id: { provider: string }) => id.provider === "email");
+      const isOAuthOnly = !hasPasswordAuth && (authUser?.app_metadata?.provider === "google" || identities.some((id: { provider: string }) => id.provider === "google"));
+
+      if (isOAuthOnly) {
+        // Send background confirmation email to the OAuth user
+        await sendOAuthAccountNotification({
+          email: cleanEmail,
+          name: userProfile.full_name || undefined,
+          provider: "Google",
+        });
+
+        return NextResponse.json({
+          success: true,
+          isOAuth: true,
+          provider: "Google",
+          message: "Your account is registered with Google Sign-In. We sent a confirmation to your email. Please use 'Continue with Google' to sign in.",
+        });
+      }
+    } catch (_oauthCheckErr) {
+      console.warn("[OAuth Check Warning]: Proceeding with standard OTP flow.");
+    }
+
+    // 3. Generate Cryptographically Secure 6-digit OTP
     const rawOtp = crypto.randomInt(100000, 999999).toString();
     const { otpHash, expiresAt } = storeOtp(cleanEmail, rawOtp);
 

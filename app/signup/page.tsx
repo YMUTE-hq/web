@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 function SignupForm() {
   const { signUp } = useAuth();
@@ -86,8 +87,20 @@ function SignupForm() {
                       }}
                       className="w-full h-14 rounded-2xl clay-button-primary text-white font-bold text-lg shadow-clay-btn transition-transform hover:scale-[1.02] active:scale-[0.98] mt-4"
                     >
-                      Continue as {role.charAt(0).toUpperCase() + role.slice(1)}
+                      Continue with Email
                     </button>
+
+                    <div className="relative my-4 flex items-center justify-center">
+                      <div className="border-t border-slate-200/80 w-full" />
+                      <span className="bg-white/95 px-3 text-xs font-bold text-navy/40 uppercase tracking-wider relative">
+                        Or sign up with
+                      </span>
+                    </div>
+
+                    <GoogleSignInButton
+                      role={role as "caster" | "company"}
+                      label={`Sign up as ${role.charAt(0).toUpperCase() + role.slice(1)} with Google`}
+                    />
                   </div>
                 )}
 
@@ -164,6 +177,18 @@ function SignupForm() {
                     >
                       {loading ? "Creating account..." : "Create Account"}
                     </button>
+
+                    <div className="relative my-4 flex items-center justify-center">
+                      <div className="border-t border-slate-200/80 w-full" />
+                      <span className="bg-white/95 px-3 text-xs font-bold text-navy/40 uppercase tracking-wider relative">
+                        Or
+                      </span>
+                    </div>
+
+                    <GoogleSignInButton
+                      role={role as "caster" | "company"}
+                      label={`Sign up with Google`}
+                    />
                   </form>
                 )}
               </div>
