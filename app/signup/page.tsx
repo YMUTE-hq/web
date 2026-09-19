@@ -9,7 +9,11 @@ import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 function SignupForm() {
   const { signUp } = useAuth();
   const searchParams = useSearchParams();
-  const defaultRole = searchParams.get("role") || "caster";
+  const ALLOWED_ROLES = ["caster", "company"] as const;
+  const rawRole = searchParams.get("role") || "caster";
+  const defaultRole = ALLOWED_ROLES.includes(rawRole as (typeof ALLOWED_ROLES)[number])
+    ? rawRole
+    : "caster";
 
   const [step, setStep] = useState(1);
   const [role, setRole] = useState(defaultRole);

@@ -12,7 +12,16 @@ export const createClient = () => {
   if (!browserClient) {
     browserClient = createBrowserClient(
       url || "https://placeholder.supabase.co",
-      key || "placeholder-anon-key"
+      key || "placeholder-anon-key",
+      {
+        auth: {
+          // Custom lock bypass to prevent "AbortError: Lock broken by another request with the 'steal' option"
+          // in multi-tab, HMR, or OAuth redirect scenarios
+          lock: async <R>(_name: string, _acquireTimeout: number, fn: () => Promise<R>): Promise<R> => {
+            return await fn();
+          },
+        },
+      }
     );
   }
 

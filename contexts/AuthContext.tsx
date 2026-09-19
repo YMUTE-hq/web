@@ -177,10 +177,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     extraData?: Record<string, unknown>,
     skipRedirect?: boolean
   ) => {
+    // Whitelist allowed signup roles; forbid client self-promotion to admin
+    const ALLOWED_SIGNUP_ROLES = ["caster", "company"];
+    if (!ALLOWED_SIGNUP_ROLES.includes(role)) {
+      return { error: "Invalid registration role selected." };
+    }
+    const safeRole = role as "caster" | "company";
+
     const { data: { session } } = await supabase.auth.getSession();
     const currentUser = session?.user;
 
-    // If already logged in, treat as a role upgrade
+    // If already logged in, treat as a role upgrade between permitted roles
     if (currentUser) {
       if (currentUser.email !== email) {
         return { error: "You are logged in with a different email. Please log out first to create a new account." };
@@ -188,7 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Perform role upgrade
       await supabase.from("users").update({
-        role,
+        role: safeRole,
         full_name: fullName,
         ...(extraData || {})
       }).eq("id", currentUser.id);
@@ -196,9 +203,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await fetchProfile(currentUser.id);
 
       if (!skipRedirect) {
-        if (role === "caster") router.push("/dashboard/caster");
-        else if (role === "company") router.push("/dashboard/company");
-        else if (role === "admin") router.push("/dashboard/admin");
+        if (safeRole === "caster") router.push("/dashboard/caster");
+        else if (safeRole === "company") router.push("/dashboard/company");
         else router.push("/");
       }
       return { error: null, user: currentUser };
@@ -208,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        data: { role, full_name: fullName },
+        data: { role: safeRole, full_name: fullName },
       },
     });
 
@@ -223,14 +229,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.from("users").upsert({
         id: data.user.id,
         email,
-        role,
+        role: safeRole,
         full_name: fullName,
         ...(extraData || {})
       });
       if (!skipRedirect) {
-        if (role === "caster") router.push("/dashboard/caster");
-        else if (role === "company") router.push("/dashboard/company");
-        else if (role === "admin") router.push("/dashboard/admin");
+        if (safeRole === "caster") router.push("/dashboard/caster");
+        else if (safeRole === "company") router.push("/dashboard/company");
         else router.push("/");
       }
     }
