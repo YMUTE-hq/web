@@ -1,21 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AdminService } from "@/backend/services/AdminService";
-import { createClient } from "@/lib/supabase-server";
+import { requireAdmin } from "@/backend/middleware/auth";
 import { getErrorMessage } from "@/types";
-
-async function requireAdmin(_req?: NextRequest) {
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase.auth.getUser();
-    const user = data?.user;
-    if (!user) return null;
-    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
-    if (profile?.role !== "admin") return null;
-    return user;
-  } catch (error: unknown) {
-    throw error;
-  }
-}
 
 export async function GET(req: NextRequest) {
   try {

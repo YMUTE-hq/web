@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient, createClient } from "@/lib/supabase-server";
+import { createAdminClient } from "@/lib/supabase-server";
+import { requireAdmin } from "@/backend/middleware/auth";
 import { getErrorMessage } from "@/types";
 
 const VALID_STATUSES = ["unverified", "pending", "verified", "rejected"];
-
-async function requireAdmin(_req?: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
-  if (profile?.role !== "admin") return null;
-  return user;
-}
 
 export async function POST(
   req: NextRequest,
