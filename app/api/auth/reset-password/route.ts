@@ -18,31 +18,16 @@ export async function POST(req: NextRequest) {
     const cleanEmail = email.trim().toLowerCase();
     const adminSupabase = createAdminClient();
 
-    const memValidation = validateResetToken(cleanEmail, resetToken);
-    let tokenIsValid = memValidation.valid;
-
-    if (!tokenIsValid) {
-      const { data: record } = await adminSupabase
-        .from("password_resets")
-        .select("*")
-        .eq("email", cleanEmail)
-        .eq("reset_token", resetToken)
-        .eq("used", false)
-        .maybeSingle();
-
-      if (record && new Date(record.expires_at).getTime() >= Date.now()) {
-        tokenIsValid = true;
-        await adminSupabase.from("password_resets").update({ used: true }).eq("id", record.id);
-      }
-    }
-
-    if (!tokenIsValid) {
+    // 1. Validate reset session against database
+    const validation = await validateResetToken(cleanEmail, resetToken);
+    if (!validation.valid) {
       return NextResponse.json(
-        { error: memValidation.error || "Invalid or expired password reset session. Please request a new OTP." },
+        { error: validation.error || "Invalid or expired password reset session. Please request a new verification code." },
         { status: 400 }
       );
     }
 
+    // 2. Fetch user profile
     const { data: userProfile } = await adminSupabase
       .from("users")
       .select("id")
@@ -53,6 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User account not found." }, { status: 404 });
     }
 
+    // 3. Update password via Supabase Admin Auth
     const { error: updateErr } = await adminSupabase.auth.admin.updateUserById(
       userProfile.id,
       { password: newPassword }
@@ -63,7 +49,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
 
-    consumeResetToken(cleanEmail);
+    // 4. Mark reset token as consumed
+    await consumeResetToken(cleanEmail, resetToken);
 
     return NextResponse.json({
       success: true,
