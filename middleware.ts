@@ -4,14 +4,27 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
-  // CORS & CSRF Protection for API Routes
-  if (path.startsWith("/api")) {
+  // ─── 1. CORS & CSRF Protection for API Routes ───
+  if (path.startsWith("/api") && !path.startsWith("/api/auth/callback") && !path.startsWith("/api/webhooks")) {
     const origin = request.headers.get("origin");
+    const referer = request.headers.get("referer");
     const nextUrlOrigin = request.nextUrl.origin;
+    const secFetchSite = request.headers.get("sec-fetch-site");
 
-    // 1. CSRF Protection: Block state-changing requests from external origins
+    let refererOrigin: string | null = null;
+    if (referer) {
+      try {
+        refererOrigin = new URL(referer).origin;
+      } catch {
+        // Malformed referer ignored
+      }
+    }
+
+    const requestOrigin = origin || refererOrigin;
+
+    // Block state-changing requests from untrusted external origins
     if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
-      if (origin && origin !== nextUrlOrigin) {
+      if (secFetchSite === "cross-site" || (requestOrigin && requestOrigin !== nextUrlOrigin)) {
         return new NextResponse(
           JSON.stringify({ error: "CSRF block: Request origin is untrusted" }),
           { status: 403, headers: { "Content-Type": "application/json" } }
@@ -19,8 +32,8 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // 2. CORS Protection: Block cross-origin reads
-    if (origin && origin !== nextUrlOrigin) {
+    // Block unauthorized cross-origin reads
+    if (secFetchSite === "cross-site" || (requestOrigin && requestOrigin !== nextUrlOrigin)) {
       return new NextResponse(
         JSON.stringify({ error: "CORS block: Cross-origin requests not allowed" }),
         { status: 403, headers: { "Content-Type": "application/json" } }
@@ -28,32 +41,37 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // ─── PUBLIC ROUTES: No Supabase contact needed ───
-  // Only contact Supabase for /dashboard/* routes that need auth.
-  // Everything else (homepage, login, signup, jobs, explore, community, API routes)
-  // passes through instantly with zero network dependency.
-  if (!path.startsWith("/dashboard")) {
+  // Check if request has Supabase auth cookies (handles chunked cookies like sb-*-auth-token.0)
+  const hasAuthCookies = request.cookies.getAll().some(
+    (c) => c.name.includes("auth-token") || c.name.includes("token") || c.name.startsWith("sb-")
+  );
+
+  const isDashboardRoute = path.startsWith("/dashboard");
+  const isApiRoute = path.startsWith("/api");
+
+  // ─── 2. PUBLIC NON-API ROUTES: Zero Supabase contact needed ───
+  // Public pages (homepage, login, signup, jobs, explore, community) pass through instantly
+  // API routes without any auth cookies also pass through instantly with zero network delay
+  if (!isDashboardRoute && (!isApiRoute || !hasAuthCookies)) {
     return NextResponse.next({ request });
   }
 
-  // ─── PROTECTED ROUTES: /dashboard/* ───
+  // ─── 3. AUTH / SESSION REFRESH HANDLING ───
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    // No Supabase config — redirect to login
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("error", "service_unavailable");
-    return NextResponse.redirect(url);
+    if (isDashboardRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("error", "service_unavailable");
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next({ request });
   }
 
-  // Check if there are any Supabase auth cookies at all (handles chunked cookies like sb-xxx-auth-token.0)
-  const hasAuthCookies = request.cookies.getAll().some(
-    (c) => c.name.includes("auth") || c.name.includes("token") || c.name.startsWith("sb-")
-  );
-
-  if (!hasAuthCookies) {
+  // For /dashboard/* without any auth cookies, immediately redirect to login
+  if (isDashboardRoute && !hasAuthCookies) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
@@ -62,8 +80,6 @@ export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   try {
-    // Use AbortController to timeout the Supabase request after 5 seconds
-    // so the middleware doesn't hang for 30+ seconds when Supabase is down.
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
@@ -98,6 +114,14 @@ export async function middleware(request: NextRequest) {
 
     clearTimeout(timeout);
 
+    // If request is to an API route:
+    // We refreshed the session cookies in supabaseResponse; pass through to the API handler.
+    // Never redirect API traffic to an HTML page.
+    if (isApiRoute) {
+      return supabaseResponse;
+    }
+
+    // If request is to a /dashboard/* route:
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
@@ -130,11 +154,13 @@ export async function middleware(request: NextRequest) {
     }
   } catch {
     // Supabase unreachable (timeout, network down, project paused)
-    // Redirect to login with error instead of hanging forever
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("error", "service_unavailable");
-    return NextResponse.redirect(url);
+    if (isDashboardRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("error", "service_unavailable");
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
   }
 
   return supabaseResponse;
