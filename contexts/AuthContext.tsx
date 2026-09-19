@@ -9,6 +9,7 @@ import {
 import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { getDashboardUrlForRole } from "@/lib/auth-routing";
 
 type UserProfile = {
   id: string;
@@ -153,17 +154,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
       try {
         const profileData = await fetchProfile(data.user.id);
-        const role = profileData?.role || "user";
-
-        let targetUrl = "/dashboard";
-        if (role === "caster") targetUrl = "/dashboard/caster";
-        else if (role === "company") targetUrl = "/dashboard/company";
-        else if (role === "admin") targetUrl = "/dashboard/admin";
-
-        window.location.href = targetUrl;
+        const targetUrl = getDashboardUrlForRole(profileData?.role);
+        router.replace(targetUrl);
       } catch (e) {
         console.error("Sign in profile fetch error", e);
-        window.location.href = "/dashboard";
+        router.replace("/dashboard");
       }
     }
     return { error: null };
@@ -203,9 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await fetchProfile(currentUser.id);
 
       if (!skipRedirect) {
-        if (safeRole === "caster") router.push("/dashboard/caster");
-        else if (safeRole === "company") router.push("/dashboard/company");
-        else router.push("/");
+        router.push(getDashboardUrlForRole(safeRole));
       }
       return { error: null, user: currentUser };
     }
@@ -234,9 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...(extraData || {})
       });
       if (!skipRedirect) {
-        if (safeRole === "caster") router.push("/dashboard/caster");
-        else if (safeRole === "company") router.push("/dashboard/company");
-        else router.push("/");
+        router.push(getDashboardUrlForRole(safeRole));
       }
     }
     return { error: null, user: data?.user };
