@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useRef,
   ReactNode,
 } from "react";
 import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
@@ -48,31 +49,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const supabase = createClient();
 
-  const fetchProfile = async (userId: string) => {
-    try {
-      // Direct query to Supabase users table
-      const { data } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", userId)
-        .single();
-      
-      if (data) {
-        setProfile(data as UserProfile);
-        return data as UserProfile;
-      }
+  const inFlightProfileRef = useRef<Map<string, Promise<UserProfile | null>>>(new Map());
+  const profileRef = useRef<UserProfile | null>(null);
 
-      // Fallback API route if direct query returns no data
-      const res = await fetch("/api/auth/profile");
-      if (res.ok) {
-        const userProfile = await res.json();
-        setProfile(userProfile as UserProfile);
-        return userProfile as UserProfile;
-      }
-    } catch (e) {
-      console.error("Error fetching profile", e);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  const fetchProfile = async (userId: string, force = false): Promise<UserProfile | null> => {
+    // If not forced and we already have this user's profile in state, return it directly
+    if (!force && profileRef.current && profileRef.current.id === userId) {
+      return profileRef.current;
     }
-    return null;
+
+    // In-flight deduplication: reuse active network promise if already fetching for this userId
+    if (!force && inFlightProfileRef.current.has(userId)) {
+      return inFlightProfileRef.current.get(userId)!;
+    }
+
+    const fetchPromise = (async () => {
+      try {
+        const { data } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", userId)
+          .single();
+        
+        if (data) {
+          const up = data as UserProfile;
+          setProfile(up);
+          profileRef.current = up;
+          return up;
+        }
+
+        // Fallback API route if direct query returns no data
+        const res = await fetch("/api/auth/profile");
+        if (res.ok) {
+          const userProfile = await res.json();
+          const up = userProfile as UserProfile;
+          setProfile(up);
+          profileRef.current = up;
+          return up;
+        }
+      } catch (e) {
+        console.error("Error fetching profile", e);
+      } finally {
+        inFlightProfileRef.current.delete(userId);
+      }
+      return null;
+    })();
+
+    inFlightProfileRef.current.set(userId, fetchPromise);
+    return fetchPromise;
   };
 
   useEffect(() => {
@@ -128,7 +156,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setProfile(null);
           } else if (session?.user) {
             setUser(session.user);
-            await fetchProfile(session.user.id);
+            // Only fetch profile if not already cached or matching this user
+            if (!profileRef.current || profileRef.current.id !== session.user.id) {
+              await fetchProfile(session.user.id);
+            }
           }
         }
       );
@@ -256,7 +287,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.error("Sign out error", e);
     } finally {
-      window.location.href = "/login";
+      router.replace("/login");
+      router.refresh();
     }
   };
 
