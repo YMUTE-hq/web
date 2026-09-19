@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { getErrorMessage } from "@/types";
 
+const ALLOWED_JOB_UPDATES = [
+  "title",
+  "domain",
+  "language",
+  "budget",
+  "event_date",
+  "event_duration",
+  "event_mode",
+  "location",
+  "description",
+  "casters_needed",
+  "payment_type",
+  "status",
+] as const;
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -34,9 +49,33 @@ export async function PATCH(
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
+
+    // Enforce strict whitelist to prevent mass-assignment attacks
+    const updates: Record<string, unknown> = {};
+    for (const key of ALLOWED_JOB_UPDATES) {
+      if (key in body && body[key] !== undefined) {
+        updates[key] = body[key];
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: "No valid fields provided for update" },
+        { status: 400 }
+      );
+    }
+
+    // Validate status values if being modified
+    if (updates.status && !["open", "closed", "draft"].includes(updates.status as string)) {
+      return NextResponse.json(
+        { error: "Invalid status value. Permitted: open, closed, draft." },
+        { status: 400 }
+      );
+    }
+
     const { data, error } = await supabase
       .from("jobs")
-      .update(body)
+      .update(updates)
       .eq("id", id)
       .eq("company_id", user.id)
       .select()
