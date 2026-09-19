@@ -10,12 +10,15 @@ cloudinary.config({
 export async function uploadToCloudinary(
   fileBuffer: Buffer,
   folder: string,
-  resourceType: "image" | "video" | "raw" | "auto" = "auto"
+  resourceType: "image" | "video" | "auto" = "auto"
 ): Promise<string> {
+  // Sanitize folder to prevent directory traversal
+  const sanitizedFolder = folder.replace(/[^a-zA-Z0-9_-]/g, "");
+
   return new Promise((resolve, reject) => {
     cloudinary.uploader
       .upload_stream(
-        { folder: `ymute/${folder}`, resource_type: resourceType },
+        { folder: `ymute/${sanitizedFolder}`, resource_type: resourceType },
         (error, result) => {
           if (error) reject(error);
           else resolve(result!.secure_url);

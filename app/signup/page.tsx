@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
+import { useGlobalLoading } from "@/contexts/LoadingContext";
 
 function SignupForm() {
   const { signUp } = useAuth();
+  const { showLoader, hideLoader } = useGlobalLoading();
   const searchParams = useSearchParams();
   const ALLOWED_ROLES = ["caster", "company"] as const;
   const rawRole = searchParams.get("role") || "caster";
@@ -30,9 +32,19 @@ function SignupForm() {
     if (password !== confirmPassword) { setError("Passwords do not match"); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
     setLoading(true);
-    const { error: err } = await signUp(email, password, role, fullName);
-    if (err) setError(err);
-    setLoading(false);
+    showLoader("Creating your account...");
+    try {
+      const { error: err } = await signUp(email, password, role, fullName);
+      if (err) {
+        setError(err);
+        setLoading(false);
+        hideLoader();
+      }
+    } catch {
+      setError("An unexpected error occurred during registration.");
+      setLoading(false);
+      hideLoader();
+    }
   };
 
   return (

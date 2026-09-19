@@ -32,6 +32,16 @@ export default function DashboardTabWrapper({ children }: { children: React.Reac
     setIsTabLoading(true);
   };
 
+  // Safety net: Auto-dismiss tab loader after 10 seconds if navigation fails or aborts
+  useEffect(() => {
+    if (isTabLoading) {
+      const timer = setTimeout(() => {
+        setIsTabLoading(false);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [isTabLoading]);
+
   // Intercept click on any sidebar dashboard link to show content-side loader INSTANTLY
   useEffect(() => {
     const handleSidebarLinkClick = (e: MouseEvent) => {
