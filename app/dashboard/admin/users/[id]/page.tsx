@@ -283,11 +283,11 @@ ALTER TABLE public.users
                 <Briefcase className="w-4 h-4 text-primary" /> Recent Applications
               </h3>
               <div className="space-y-3">
-                {apps.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-700 font-medium line-clamp-1 mr-2">{a.job?.title || "—"}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0 ${a.status === "accepted" ? "bg-emerald-100 text-emerald-600" : a.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"}`}>
-                      {a.status}
+                {(apps as Array<{ id: string; status: string; jobs?: { title?: string } | null } | null>).map((a) => (
+                  <div key={a?.id} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-700 font-medium line-clamp-1 mr-2">{a?.jobs?.title || "—"}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0 ${a?.status === "accepted" ? "bg-emerald-100 text-emerald-600" : a?.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"}`}>
+                      {a?.status}
                     </span>
                   </div>
                 ))}

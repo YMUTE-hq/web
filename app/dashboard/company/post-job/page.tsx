@@ -105,25 +105,20 @@ export default function PostJobPage() {
     const delayDebounce = setTimeout(async () => {
       setLoadingSuggestions(true);
       try {
-        // Bias results to India via viewbox (approx: 68.1 to 97.4 long, 8.0 to 35.5 lat) and bounded=0 (priority bias)
+        // Proxy via API to avoid forbidden User-Agent header + CORS issues in browser.
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationQuery)}&format=json&featuretype=settlement&viewbox=68.1,8.0,97.4,35.5&bounded=0&limit=5`,
-          {
-            headers: {
-              "User-Agent": "YMUTE-Voice-Marketplace-App/1.0"
-            }
-          }
+          `/api/geocode?q=${encodeURIComponent(locationQuery)}`
         );
         if (res.ok) {
           const data = await res.json();
-          const items = data.map((item: { display_name: string }) => ({
+          const items = (Array.isArray(data) ? data : []).map((item: { display_name: string }) => ({
             name: item.display_name
           }));
           setSuggestions(items);
           setShowSuggestions(true);
         }
       } catch (err) {
-        console.error("OSM Geocoding Error:", err);
+        console.error("Geocoding Error:", err);
       } finally {
         setLoadingSuggestions(false);
       }
@@ -274,7 +269,7 @@ export default function PostJobPage() {
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold ml-2">No. of Casters Needed</label>
-                <input className="clay-input p-4 rounded-2xl" placeholder="2" type="number" min={1} value={form.casters_needed} onChange={(e) => set("casters_needed", parseInt(e.target.value))} />
+                <input className="clay-input p-4 rounded-2xl" placeholder="2" type="number" min={1} max={100} value={form.casters_needed} onChange={(e) => { const n = parseInt(e.target.value, 10); set("casters_needed", Number.isFinite(n) ? Math.min(Math.max(1, n), 100) : 1); }} />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold ml-2">Event Date</label>

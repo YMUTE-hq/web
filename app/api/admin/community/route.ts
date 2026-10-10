@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AdminService } from "@/backend/services/AdminService";
-import { createClient } from "@/lib/supabase-server";
+import { requireAdmin } from "@/backend/middleware/auth";
 import { getErrorMessage } from "@/types";
-
-async function requireAdmin(_req?: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
-  if (profile?.role !== "admin") return null;
-  return user;
-}
 
 export async function DELETE(req: NextRequest) {
   const user = await requireAdmin(req);
@@ -35,8 +26,12 @@ export async function PATCH(req: NextRequest) {
   try {
     const { id, points } = await req.json();
     if (!id || points === undefined) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    const n = Number(points);
+    if (!Number.isInteger(n) || n < 0 || n > 1000000) {
+      return NextResponse.json({ error: "Points must be an integer 0–1000000" }, { status: 400 });
+    }
 
-    await AdminService.updateLeaderboardPoints(id, points);
+    await AdminService.updateLeaderboardPoints(id, n);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });

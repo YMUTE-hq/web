@@ -63,37 +63,46 @@ export default function CasterSignupPage() {
   const handleSubmit = async () => {
     setLoading(true);
     setError("");
-    const { error: err, user } = await signUp(email, password, "caster", fullName, {
-      bio,
-      languages,
-      domains
-    }, true); // skipRedirect = true
+    try {
+      const { error: err, user } = await signUp(email, password, "caster", fullName, {
+        bio,
+        languages,
+        domains
+      }, true); // skipRedirect = true
 
-    if (err) {
-      setError(err);
-      setLoading(false);
-      return;
-    }
-
-    if (user && uploadedFile) {
-      const formData = new FormData();
-      formData.append("file", uploadedFile);
-      formData.append("folder", "audio_reels");
-      formData.append("resource_type", "auto");
-      formData.append("field", "audio_sample_url");
-
-      try {
-        await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-      } catch (uploadErr) {
-        console.error("Audio upload failed:", uploadErr);
-        // Continue anyway since signup succeeded
+      if (err) {
+        setError(err);
+        setLoading(false);
+        return;
       }
-    }
 
-    router.push("/dashboard/caster");
+      if (user && uploadedFile) {
+        const formData = new FormData();
+        formData.append("file", uploadedFile);
+        formData.append("folder", "audio_reels");
+        formData.append("resource_type", "auto");
+        formData.append("field", "audio_sample_url");
+
+        try {
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+          if (!res.ok) {
+            console.error("Audio upload failed:", res.status);
+          }
+        } catch (uploadErr) {
+          console.error("Audio upload failed:", uploadErr);
+          // Continue anyway since signup succeeded
+        }
+      }
+
+      router.push("/dashboard/caster");
+    } catch (e) {
+      console.error("[Caster signup] failed:", e);
+      setError("Signup failed. Please try again.");
+      setLoading(false);
+    }
   };
 
   const toggleDomain = (domain: string) => {

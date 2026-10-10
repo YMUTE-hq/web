@@ -4,7 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limiter";
 
 export async function POST(request: NextRequest) {
   // Tier 2 Rate Limit: Max 10 conversation creations per minute per IP
-  const rateCheck = checkRateLimit(request, {
+  const rateCheck = await checkRateLimit(request, {
     prefix: "chat_create",
     limit: 10,
     windowMs: 60 * 1000,

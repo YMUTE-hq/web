@@ -23,12 +23,14 @@ export class UserService {
     try {
       const result = await UserRepository.adminUpdateUser(casterId, { verification_status: isVerified ? "verified" : "rejected" });
       
-      if (isVerified && result.email) {
+      if (isVerified && result?.email && typeof result.email === "string" && result.email.includes("@")) {
+        const safeName = String(result.full_name ?? "there")
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         await getResend().emails.send({
           from: EMAIL_SENDERS.AUTH,
           to: result.email,
           subject: "Your Profile is Verified!",
-          html: `<p>Congratulations ${result.full_name}, your profile has been approved by YMUTE admin.</p>`,
+          html: `<p>Congratulations ${safeName}, your profile has been approved by YMUTE admin.</p>`,
         });
       }
 
@@ -40,7 +42,7 @@ export class UserService {
 
   static async suspendUser(userId: string) {
     try {
-      return await UserRepository.adminUpdateUser(userId, { verification_status: "unverified" });
+      return await UserRepository.adminUpdateUser(userId, { is_suspended: true });
     } catch (e: unknown) {
       throw new Error(`Suspension error: ${getErrorMessage(e)}`);
     }

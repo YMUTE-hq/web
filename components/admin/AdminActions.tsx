@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface AdminActionButtonProps {
@@ -12,11 +12,13 @@ interface AdminActionButtonProps {
 
 export function AdminActionButton({ userId, action, label, className = "", confirm: confirmMsg }: AdminActionButtonProps) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const handleClick = async () => {
     if (confirmMsg && !window.confirm(confirmMsg)) return;
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/admin/users", {
         method: "PATCH",
@@ -24,17 +26,22 @@ export function AdminActionButton({ userId, action, label, className = "", confi
         body: JSON.stringify({ id: userId, action }),
       });
       if (res.ok) router.refresh();
+      else setError("Action failed");
     } catch (e) {
       console.error(e);
+      setError("Action failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <button onClick={handleClick} disabled={loading} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50 ${className}`}>
-      {loading ? "..." : label}
-    </button>
+    <span className="inline-flex flex-col gap-1">
+      <button onClick={handleClick} disabled={loading} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50 ${className}`}>
+        {loading ? "..." : label}
+      </button>
+      {error && <span className="text-[11px] text-rose-600">{error}</span>}
+    </span>
   );
 }
 
@@ -52,7 +59,7 @@ export function AdminDeleteButton({ id, endpoint, label = "Delete" }: AdminDelet
     if (!window.confirm("Are you sure? This cannot be undone.")) return;
     setLoading(true);
     try {
-      const res = await fetch(`${endpoint}?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`${endpoint}?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       if (res.ok) router.refresh();
     } catch (e) {
       console.error(e);
@@ -138,12 +145,16 @@ export function AdminAppStatusButton({ appId, status, label, className = "" }: A
 
 export function AdminSettingToggle({ settingKey, currentValue, label, description }: {
   settingKey: string;
-  currentValue: string;
+  currentValue: string | boolean;
   label: string;
   description: string;
 }) {
-  const [value, setValue] = useState(currentValue === "true");
+  const [value, setValue] = useState(String(currentValue) === "true");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setValue(String(currentValue) === "true");
+  }, [currentValue]);
 
   const toggle = async () => {
     const newVal = !value;
@@ -189,6 +200,10 @@ export function AdminSettingInput({ settingKey, currentValue, label, description
   const [value, setValue] = useState(currentValue);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setValue(currentValue);
+  }, [currentValue]);
 
   const save = async () => {
     setLoading(true);

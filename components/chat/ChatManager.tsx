@@ -15,11 +15,17 @@ export default function ChatManager() {
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const convAbortRef = useRef<AbortController | null>(null);
+  const msgAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (user?.id) {
       fetchConversations();
     }
+    return () => {
+      convAbortRef.current?.abort();
+      msgAbortRef.current?.abort();
+    };
   }, [user?.id]);
 
   // Handle auto-selecting or auto-creating conversation via URL query params (?convId=... or ?userId=...)
@@ -97,11 +103,9 @@ export default function ChatManager() {
               if (current.some((m) => m.id === newMessage.id)) return current;
               return [...current, newMessage];
             });
-            try {
-              fetch(`/api/chat/messages?conversationId=${activeChat.id}`);
-            } catch (err) {
-              console.error(err);
-            }
+            fetch(`/api/chat/messages?conversationId=${activeChat.id}`).catch((err) => {
+              console.error("[ChatManager] mark-as-read failed:", err);
+            });
           }
         }
       )
@@ -124,32 +128,50 @@ export default function ChatManager() {
   };
 
   const fetchConversations = async () => {
+    if (convAbortRef.current) {
+      convAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    convAbortRef.current = controller;
     setLoadingConversations(true);
     try {
-      const res = await fetch("/api/chat/conversations");
+      const res = await fetch("/api/chat/conversations", { signal: controller.signal });
       if (res.ok) {
         const data = await res.json();
         setConversations(data);
       }
-    } catch (err) {
-      console.error("Error fetching conversations:", err);
+    } catch (err: unknown) {
+      if ((err as Error)?.name !== "AbortError") {
+        console.error("Error fetching conversations:", err);
+      }
     } finally {
-      setLoadingConversations(false);
+      if (convAbortRef.current === controller) {
+        setLoadingConversations(false);
+      }
     }
   };
 
   const fetchMessages = async (conversationId: string) => {
+    if (msgAbortRef.current) {
+      msgAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    msgAbortRef.current = controller;
     setLoadingMessages(true);
     try {
-      const res = await fetch(`/api/chat/messages?conversationId=${conversationId}`);
+      const res = await fetch(`/api/chat/messages?conversationId=${conversationId}`, { signal: controller.signal });
       if (res.ok) {
         const data = await res.json();
         setMessages(data);
       }
-    } catch (err) {
-      console.error("Error fetching messages:", err);
+    } catch (err: unknown) {
+      if ((err as Error)?.name !== "AbortError") {
+        console.error("Error fetching messages:", err);
+      }
     } finally {
-      setLoadingMessages(false);
+      if (msgAbortRef.current === controller) {
+        setLoadingMessages(false);
+      }
     }
   };
 
@@ -205,7 +227,9 @@ export default function ChatManager() {
   // getChatPartner is legacy; participant is already resolved in the API response
 
   const formatTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
@@ -297,10 +321,10 @@ export default function ChatManager() {
               ) : messages.length === 0 ? (
                 <div className="text-center text-slate-400 py-10">Start the conversation!</div>
               ) : (
-                messages.map((msg, index) => {
+                messages.map((msg) => {
                   const isOwn = msg.sender_id === user?.id;
                   return (
-                    <div key={index} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
+                    <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
                       <div
                         className={`max-w-[70%] p-3 px-4 rounded-2xl shadow-sm text-sm ${
                           isOwn

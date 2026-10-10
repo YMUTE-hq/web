@@ -4,14 +4,31 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
-  // CORS & CSRF Protection for API Routes
-  if (path.startsWith("/api")) {
-    const origin = request.headers.get("origin");
-    const nextUrlOrigin = request.nextUrl.origin;
+  // Never trust a client-sent identity header: strip it first. It is re-added
+  // below ONLY after the session is validated (finalizeResponse).
+  request.headers.delete("x-user-id");
 
-    // 1. CSRF Protection: Block state-changing requests from external origins
+  // ─── 1. CORS & CSRF Protection for API Routes ───
+  if (path.startsWith("/api") && !path.startsWith("/api/auth/callback") && !path.startsWith("/api/webhooks")) {
+    const origin = request.headers.get("origin");
+    const referer = request.headers.get("referer");
+    const nextUrlOrigin = request.nextUrl.origin;
+    const secFetchSite = request.headers.get("sec-fetch-site");
+
+    let refererOrigin: string | null = null;
+    if (referer) {
+      try {
+        refererOrigin = new URL(referer).origin;
+      } catch {
+        // Malformed referer ignored
+      }
+    }
+
+    const requestOrigin = origin || refererOrigin;
+
+    // Block state-changing requests from untrusted external origins
     if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
-      if (origin && origin !== nextUrlOrigin) {
+      if (secFetchSite === "cross-site" || (requestOrigin && requestOrigin !== nextUrlOrigin)) {
         return new NextResponse(
           JSON.stringify({ error: "CSRF block: Request origin is untrusted" }),
           { status: 403, headers: { "Content-Type": "application/json" } }
@@ -19,8 +36,8 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // 2. CORS Protection: Block cross-origin reads
-    if (origin && origin !== nextUrlOrigin) {
+    // Block unauthorized cross-origin reads
+    if (secFetchSite === "cross-site" || (requestOrigin && requestOrigin !== nextUrlOrigin)) {
       return new NextResponse(
         JSON.stringify({ error: "CORS block: Cross-origin requests not allowed" }),
         { status: 403, headers: { "Content-Type": "application/json" } }
@@ -28,42 +45,67 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // ─── PUBLIC ROUTES: No Supabase contact needed ───
-  // Only contact Supabase for /dashboard/* routes that need auth.
-  // Everything else (homepage, login, signup, jobs, explore, community, API routes)
-  // passes through instantly with zero network dependency.
-  if (!path.startsWith("/dashboard")) {
+  // Check if request has Supabase auth cookies (handles chunked cookies like sb-*-auth-token.0)
+  // Narrow match: only sb-*-auth-token* to avoid false positives on unrelated *token* cookies.
+  const hasAuthCookies = request.cookies.getAll().some(
+    (c) => c.name.startsWith("sb-") && c.name.includes("auth-token")
+  );
+
+  const isDashboardRoute = path.startsWith("/dashboard");
+  const isApiRoute = path.startsWith("/api");
+
+  // ─── 2. PUBLIC NON-API ROUTES: Zero Supabase contact needed ───
+  // Public pages (homepage, login, signup, jobs, explore, community) pass through instantly
+  // API routes without any auth cookies also pass through instantly with zero network delay
+  if (!isDashboardRoute && (!isApiRoute || !hasAuthCookies)) {
     return NextResponse.next({ request });
   }
 
-  // ─── PROTECTED ROUTES: /dashboard/* ───
+  // ─── 3. AUTH / SESSION REFRESH HANDLING ───
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    // No Supabase config — redirect to login
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("error", "service_unavailable");
-    return NextResponse.redirect(url);
+    if (isDashboardRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("error", "service_unavailable");
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next({ request });
   }
 
-  // Check if there are any Supabase auth cookies at all (handles chunked cookies like sb-xxx-auth-token.0)
-  const hasAuthCookies = request.cookies.getAll().some(
-    (c) => c.name.includes("auth") || c.name.includes("token") || c.name.startsWith("sb-")
-  );
-
-  if (!hasAuthCookies) {
+  // For /dashboard/* without any auth cookies, immediately redirect to login
+  if (isDashboardRoute && !hasAuthCookies) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
   let supabaseResponse = NextResponse.next({ request });
+  let authedUserId: string | null = null;
+  type CookieToSet = {
+    name: string;
+    value: string;
+    options?: Parameters<NextResponse["cookies"]["set"]>[2];
+  };
+  const recordedCookies: CookieToSet[] = [];
+
+  // Rebuilds the passthrough response from the live request plus all recorded
+  // Set-Cookie operations, stamping the validated user id so pages/API routes
+  // can skip their own duplicate getUser() call (a full Auth-server round-trip
+  // per request — the single biggest per-navigation tax in the logs).
+  const finalizeResponse = () => {
+    const headers = new Headers(request.headers);
+    if (authedUserId) headers.set("x-user-id", authedUserId);
+    supabaseResponse = NextResponse.next({ request: { headers } });
+    for (const c of recordedCookies) {
+      if (c.options) supabaseResponse.cookies.set(c.name, c.value, c.options);
+      else supabaseResponse.cookies.set(c.name, c.value);
+    }
+  };
 
   try {
-    // Use AbortController to timeout the Supabase request after 5 seconds
-    // so the middleware doesn't hang for 30+ seconds when Supabase is down.
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
@@ -79,64 +121,85 @@ export async function middleware(request: NextRequest) {
             cookiesToSet.forEach(({ name, value }) =>
               request.cookies.set(name, value)
             );
-            supabaseResponse = NextResponse.next({ request });
-            cookiesToSet.forEach(({ name, value, options }) =>
-              supabaseResponse.cookies.set(name, value, options)
-            );
+            // Record (dedup by name); applied in finalizeResponse so the
+            // stamped identity header is never lost by a rebuild.
+            for (const c of cookiesToSet) {
+              const i = recordedCookies.findIndex((k) => k.name === c.name);
+              if (i >= 0) recordedCookies[i] = c;
+              else recordedCookies.push(c);
+            }
           },
         },
         global: {
           fetch: (url, options) => {
-            return fetch(url, { ...options, signal: controller.signal });
+            const { signal: callerSignal, ...rest } = (options ?? {}) as RequestInit & { signal?: AbortSignal };
+            const signals = [controller.signal, callerSignal].filter(Boolean) as AbortSignal[];
+            const combined = signals.length <= 1 ? signals[0] : AbortSignal.any(signals);
+            return fetch(url, { ...rest, signal: combined ?? controller.signal });
           },
         },
       }
     );
 
-    const { data } = await supabase.auth.getUser();
-    const user = data?.user;
+    let user = null;
+    try {
+      const { data } = await supabase.auth.getUser();
+      user = data?.user;
+    } finally {
+      clearTimeout(timeout);
+    }
+    authedUserId = user?.id ?? null;
+    finalizeResponse();
 
-    clearTimeout(timeout);
+    // If request is to an API route:
+    // We refreshed the session cookies in supabaseResponse; pass through to the API handler.
+    // Never redirect API traffic to an HTML page.
+    if (isApiRoute) {
+      return supabaseResponse;
+    }
 
+    // If request is to a /dashboard/* route:
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);
     }
 
-    // Role-Based Access Control (RBAC) fetching
-    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
-    const role = profile?.role || "user";
-
-    // Admin protecting
-    if (path.startsWith("/dashboard/admin") && role !== "admin") {
-      const url = request.nextUrl.clone();
-      url.pathname = role === "user" ? "/" : `/dashboard/${role}`;
-      return NextResponse.redirect(url);
-    }
-
-    // Caster protecting
-    if (path.startsWith("/dashboard/caster") && role !== "caster") {
-      const url = request.nextUrl.clone();
-      url.pathname = role === "admin" ? "/dashboard/admin" : (role === "user" ? "/" : `/dashboard/${role}`);
-      return NextResponse.redirect(url);
-    }
-
-    // Company protecting
-    if (path.startsWith("/dashboard/company") && role !== "company") {
-      const url = request.nextUrl.clone();
-      url.pathname = role === "admin" ? "/dashboard/admin" : (role === "user" ? "/" : `/dashboard/${role}`);
-      return NextResponse.redirect(url);
+    // Role gate: ONLY /dashboard/admin keeps a middleware-level check, because
+    // admin pages use the service-role client (RLS bypass) and have no per-page
+    // guards of their own. Admin visits are rare, so one extra query here is fine.
+    // Caster/company role UX is enforced in their pages via requireRole() (lib/viewer.ts),
+    // which shares one cached profile query per request instead of adding a
+    // round-trip to every navigation. Their data is RLS/API-guarded regardless.
+    if (path.startsWith("/dashboard/admin")) {
+      // Fail-closed: if profile lookup fails, redirect to login.
+      const { data: profile, error: profileError } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
+      if (profileError || !profile?.role) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+        url.searchParams.set("error", "profile_missing");
+        return NextResponse.redirect(url);
+      }
+      const role = profile.role as string;
+      if (role !== "admin") {
+        const url = request.nextUrl.clone();
+        url.pathname = role === "caster" || role === "company" ? `/dashboard/${role}` : "/login";
+        return NextResponse.redirect(url);
+      }
     }
   } catch {
     // Supabase unreachable (timeout, network down, project paused)
-    // Redirect to login with error instead of hanging forever
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("error", "service_unavailable");
-    return NextResponse.redirect(url);
+    if (isDashboardRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("error", "service_unavailable");
+      return NextResponse.redirect(url);
+    }
+    finalizeResponse();
+    return supabaseResponse;
   }
 
+  finalizeResponse();
   return supabaseResponse;
 }
 

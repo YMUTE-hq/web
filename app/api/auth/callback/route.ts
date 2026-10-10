@@ -4,7 +4,13 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const role = searchParams.get("role") || "caster";
+  const ALLOWED_SIGNUP_ROLES = ["caster", "company"] as const;
+  type AllowedSignupRole = (typeof ALLOWED_SIGNUP_ROLES)[number];
+
+  const rawRole = searchParams.get("role") || "caster";
+  const role: AllowedSignupRole = ALLOWED_SIGNUP_ROLES.includes(rawRole as AllowedSignupRole)
+    ? (rawRole as AllowedSignupRole)
+    : "caster";
   const next = searchParams.get("next");
 
   if (code) {
@@ -33,18 +39,21 @@ export async function GET(request: Request) {
           data.user.user_metadata?.picture ||
           null;
 
-        await supabase.from("users").upsert({
+        const { error: upsertError } = await supabase.from("users").upsert({
           id: data.user.id,
           email: data.user.email,
           full_name: fullName,
           avatar_url: avatarUrl,
-          role: targetRole,
+          role: role,
           created_at: new Date().toISOString(),
         });
+        if (upsertError) {
+          console.error("[OAuth Callback] profile upsert failed:", upsertError.message);
+        }
       }
 
-      // 3. Dynamic redirection
-      if (next) {
+      // 3. Dynamic redirection — same-origin paths only (open-redirect fix)
+      if (next && next.startsWith("/") && !next.startsWith("//") && !next.includes("://")) {
         return NextResponse.redirect(`${origin}${next}`);
       }
 

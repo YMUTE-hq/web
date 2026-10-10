@@ -1,21 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase-server";
+import { requireAdmin } from "@/backend/middleware/auth";
 import { checkRateLimit } from "@/lib/rate-limiter";
 import { getErrorMessage } from "@/types";
-
-async function requireAdmin(_req?: NextRequest) {
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase.auth.getUser();
-    const user = data?.user;
-    if (!user) return null;
-    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
-    if (profile?.role !== "admin") return null;
-    return user;
-  } catch (error: unknown) {
-    throw error;
-  }
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,13 +10,17 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
     const supabase = await createClient();
-    const { data, error } = await supabase
+    // Admin GET must bypass RLS consistently (requireAdmin already passed) — use admin client.
+    void supabase;
+    const adminSupabase = createAdminClient();
+    const { data, error } = await adminSupabase
       .from("careers")
       .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
-      return NextResponse.json([]);
+      console.error("[Admin careers GET]:", error.message);
+      return NextResponse.json({ error: "Failed to fetch careers" }, { status: 500 });
     }
 
     return NextResponse.json(data || []);
@@ -40,7 +31,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const rateCheck = checkRateLimit(req, {
+    const rateCheck = await checkRateLimit(req, {
       prefix: "admin_careers",
       limit: 30,
       windowMs: 60 * 1000,

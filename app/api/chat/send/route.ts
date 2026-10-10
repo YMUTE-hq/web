@@ -6,7 +6,7 @@ import { getErrorMessage } from "@/types";
 
 export async function POST(req: NextRequest) {
   try {
-    const rateCheck = checkRateLimit(req, {
+    const rateCheck = await checkRateLimit(req, {
       prefix: "chat_send",
       limit: 20,
       windowMs: 60 * 1000,
@@ -26,11 +26,20 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { conversationId, text, mediaUrl } = body;
 
-    if (!conversationId || (!text && !mediaUrl)) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!conversationId || !UUID.test(conversationId)) {
+      return NextResponse.json({ error: "Invalid conversation ID" }, { status: 400 });
+    }
+    const cleanText = typeof text === "string" ? text.trim() : "";
+    const cleanMedia = typeof mediaUrl === "string" ? mediaUrl.trim() : undefined;
+    if ((!cleanText && !cleanMedia) || (cleanText && cleanText.length > 5000)) {
+      return NextResponse.json({ error: "Invalid message body" }, { status: 400 });
+    }
+    if (cleanMedia && (cleanMedia.length > 2048 || !cleanMedia.startsWith("https://"))) {
+      return NextResponse.json({ error: "Invalid attachment URL" }, { status: 400 });
     }
 
-    const message = await ChatService.sendMessage(conversationId, user.id, text, mediaUrl);
+    const message = await ChatService.sendMessage(conversationId, user.id, cleanText, cleanMedia);
 
     const adminSupabase = createAdminClient();
     const { data: members } = await adminSupabase
@@ -40,18 +49,21 @@ export async function POST(req: NextRequest) {
       .neq("user_id", user.id);
 
     if (members && members.length > 0) {
-      const recipient = members[0];
       const senderName = user.user_metadata?.full_name || "Someone";
-      const messagePreview = text ? (text.length > 40 ? text.substring(0, 40) + "..." : text) : "Sent an attachment";
+      const messagePreview = cleanText ? (cleanText.length > 40 ? cleanText.substring(0, 40) + "..." : cleanText) : "Sent an attachment";
 
-      try {
-        await adminSupabase.from("notifications").insert({
-          user_id: recipient.user_id,
-          message: `${senderName}: ${messagePreview}`,
-          read: false,
-          created_at: new Date().toISOString(),
-        });
-      } catch {}
+      for (const recipient of members) {
+        try {
+          await adminSupabase.from("notifications").insert({
+            user_id: recipient.user_id,
+            message: `${senderName}: ${messagePreview}`,
+            read: false,
+            created_at: new Date().toISOString(),
+          });
+        } catch (err) {
+          console.error("[Chat send] notification insert failed:", err);
+        }
+      }
     }
 
     return NextResponse.json(message);

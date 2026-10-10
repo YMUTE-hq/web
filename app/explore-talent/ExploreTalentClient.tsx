@@ -56,7 +56,8 @@ export default function ExploreTalentClient({ initialCasters }: { initialCasters
         query = query.contains("languages", [language]);
       }
       if (search) {
-        query = query.or(`full_name.ilike.%${search}%,bio.ilike.%${search}%`);
+        const safe = String(search).replace(/[\\%,_()"]/g, "\\$&").slice(0, 100);
+        query = query.or(`full_name.ilike.%${safe}%,bio.ilike.%${safe}%`);
       }
 
       const { data } = await query;

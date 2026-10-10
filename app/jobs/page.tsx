@@ -73,8 +73,14 @@ function ExploreJobsContent() {
           .order("created_at", { ascending: false });
 
         if (domain && domain !== "All") query = query.eq("domain", domain);
-        if (language && language !== "All") query = query.ilike("language", `%${language}%`);
-        if (debouncedSearch) query = query.or(`title.ilike.%${debouncedSearch}%,description.ilike.%${debouncedSearch}%`);
+        if (language && language !== "All") {
+          const safeLang = String(language).replace(/[\\%,_()"]/g, "\\$&").slice(0, 100);
+          query = query.ilike("language", `%${safeLang}%`);
+        }
+        if (debouncedSearch) {
+          const safe = String(debouncedSearch).replace(/[\\%,_()"]/g, "\\$&").slice(0, 100);
+          query = query.or(`title.ilike.%${safe}%,description.ilike.%${safe}%`);
+        }
 
         const { data } = await query;
         setJobs((data as unknown as Job[]) || []);
@@ -94,7 +100,7 @@ function ExploreJobsContent() {
     e.preventDefault();
     if (search.length > 3 || search.length === 0) {
       setDebouncedSearch(search);
-      fetchJobs();
+      // Effect on [debouncedSearch] fires fetch — do not call fetchJobs() here (double fetch fix).
     }
   };
 
@@ -156,7 +162,7 @@ function ExploreJobsContent() {
               />
             </div>
           </div>
-          <button onClick={() => { setDomain("All"); setLanguage("All"); setSearch(""); }} className="mt-2 w-full bg-navy-deep text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+          <button onClick={() => { setDomain("All"); setLanguage("All"); setSearch(""); setDebouncedSearch(""); }} className="mt-2 w-full bg-navy-deep text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2">
             <span className="material-symbols-outlined text-sm">refresh</span> Clear All
           </button>
         </aside>

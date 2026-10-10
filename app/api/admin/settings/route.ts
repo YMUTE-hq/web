@@ -1,22 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AdminService } from "@/backend/services/AdminService";
-import { createClient } from "@/lib/supabase-server";
+import { requireAdmin } from "@/backend/middleware/auth";
 import { getErrorMessage } from "@/types";
-
-async function requireAdmin(_req?: NextRequest) {
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase.auth.getUser();
-    const user = data?.user;
-    if (!user) return null;
-    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
-    if (profile?.role !== "admin") return null;
-    return user;
-  } catch (error) {
-    console.error("requireAdmin error", error);
-    return null;
-  }
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -36,9 +21,12 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const { key, value } = body;
     if (!key || value === undefined) return NextResponse.json({ error: "Missing key or value" }, { status: 400 });
-    const result = await AdminService.updateSetting(key, String(value));
+    if (typeof value !== "string") return NextResponse.json({ error: "Value must be a string" }, { status: 400 });
+    const result = await AdminService.updateSetting(key, value);
     return NextResponse.json(result);
   } catch (error: unknown) {
-    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
+    const msg = getErrorMessage(error);
+    const status = msg.includes("Unknown setting") || msg.includes("Invalid setting") ? 400 : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }

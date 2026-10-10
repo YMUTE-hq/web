@@ -4,11 +4,13 @@ import {
   useContext,
   useEffect,
   useState,
+  useRef,
   ReactNode,
 } from "react";
 import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { getDashboardUrlForRole } from "@/lib/auth-routing";
 
 type UserProfile = {
   id: string;
@@ -40,38 +42,87 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Fail-open helper: never let auth hang the UI forever if Supabase is slow/unreachable.
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      }
+    );
+  });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
+  // Memoize browser client — createClient() throws when env missing (fail-fast).
+  const [supabase] = useState(() => createClient());
 
-  const fetchProfile = async (userId: string) => {
-    try {
-      // Direct query to Supabase users table
-      const { data } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", userId)
-        .single();
-      
-      if (data) {
-        setProfile(data as UserProfile);
-        return data as UserProfile;
-      }
+  const inFlightProfileRef = useRef<Map<string, Promise<UserProfile | null>>>(new Map());
+  const profileRef = useRef<UserProfile | null>(null);
 
-      // Fallback API route if direct query returns no data
-      const res = await fetch("/api/auth/profile");
-      if (res.ok) {
-        const userProfile = await res.json();
-        setProfile(userProfile as UserProfile);
-        return userProfile as UserProfile;
-      }
-    } catch (e) {
-      console.error("Error fetching profile", e);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  const fetchProfile = async (userId: string, force = false): Promise<UserProfile | null> => {
+    // If not forced and we already have this user's profile in state, return it directly
+    if (!force && profileRef.current && profileRef.current.id === userId) {
+      return profileRef.current;
     }
-    return null;
+
+    // In-flight deduplication: reuse active network promise if already fetching for this userId
+    if (!force && inFlightProfileRef.current.has(userId)) {
+      return inFlightProfileRef.current.get(userId)!;
+    }
+
+    const fetchPromise = (async () => {
+      const ctrl = new AbortController();
+      const abortTimer = setTimeout(() => ctrl.abort(), 10000);
+      try {
+        const { data } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", userId)
+          .abortSignal(ctrl.signal)
+          .single();
+        
+        if (data) {
+          const up = data as UserProfile;
+          setProfile(up);
+          profileRef.current = up;
+          return up;
+        }
+
+        // Fallback API route if direct query returns no data (8s cap so UI never hangs)
+        const res = await fetch("/api/auth/profile", { signal: AbortSignal.timeout(8000) });
+        if (res.ok) {
+          const userProfile = await res.json();
+          const up = userProfile as UserProfile;
+          setProfile(up);
+          profileRef.current = up;
+          return up;
+        }
+      } catch (e) {
+        console.error("Error fetching profile", e);
+      } finally {
+        clearTimeout(abortTimer);
+        inFlightProfileRef.current.delete(userId);
+      }
+      return null;
+    })();
+
+    inFlightProfileRef.current.set(userId, fetchPromise);
+    return fetchPromise;
   };
 
   useEffect(() => {
@@ -79,7 +130,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const initAuth = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        type SessionResult = Awaited<ReturnType<typeof supabase.auth.getSession>>;
+        const { data, error } = (await withTimeout(
+          supabase.auth.getSession(),
+          8000,
+          "Session fetch"
+        )) as SessionResult;
 
         if (error) {
           if (error.message?.includes("Refresh Token") || error.message?.includes("invalid")) {
@@ -96,7 +152,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (mounted) {
           setUser(session?.user ?? null);
           if (session?.user) {
-            await fetchProfile(session.user.id);
+            await withTimeout(fetchProfile(session.user.id), 12000, "Profile fetch").catch((e) => {
+              console.error("Profile fetch timed out, continuing without profile", e);
+            });
           } else {
             setProfile(null);
           }
@@ -127,7 +185,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setProfile(null);
           } else if (session?.user) {
             setUser(session.user);
-            await fetchProfile(session.user.id);
+            // Only fetch profile if not already cached or matching this user
+            if (!profileRef.current || profileRef.current.id !== session.user.id) {
+              await fetchProfile(session.user.id);
+            }
           }
         }
       );
@@ -143,6 +204,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Hard safety net: never leave the UI in a permanent loading state.
+  // If init hangs for any unforeseen reason, degrade to logged-out UI after 15s.
+  useEffect(() => {
+    if (!loading) return;
+    const t = setTimeout(() => setLoading(false), 15000);
+    return () => clearTimeout(t);
+  }, [loading]);
+
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -153,17 +222,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
       try {
         const profileData = await fetchProfile(data.user.id);
-        const role = profileData?.role || "user";
-
-        let targetUrl = "/dashboard";
-        if (role === "caster") targetUrl = "/dashboard/caster";
-        else if (role === "company") targetUrl = "/dashboard/company";
-        else if (role === "admin") targetUrl = "/dashboard/admin";
-
-        window.location.href = targetUrl;
+        if (!profileData) {
+          router.replace("/dashboard");
+        } else {
+          router.replace(getDashboardUrlForRole(profileData.role));
+        }
       } catch (e) {
         console.error("Sign in profile fetch error", e);
-        window.location.href = "/dashboard";
+        router.replace("/dashboard");
       }
     }
     return { error: null };
@@ -177,29 +243,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     extraData?: Record<string, unknown>,
     skipRedirect?: boolean
   ) => {
+    // Whitelist allowed signup roles; forbid client self-promotion to admin
+    const ALLOWED_SIGNUP_ROLES = ["caster", "company"];
+    if (!ALLOWED_SIGNUP_ROLES.includes(role)) {
+      return { error: "Invalid registration role selected." };
+    }
+    const safeRole = role as "caster" | "company";
+
     const { data: { session } } = await supabase.auth.getSession();
     const currentUser = session?.user;
 
-    // If already logged in, treat as a role upgrade
+    // If already logged in, treat as a role upgrade between permitted roles
     if (currentUser) {
       if (currentUser.email !== email) {
         return { error: "You are logged in with a different email. Please log out first to create a new account." };
       }
       
-      // Perform role upgrade
-      await supabase.from("users").update({
-        role,
+      // Perform role upgrade — whitelist profile fields only; never allow role override via extraData
+      const ALLOWED_EXTRA = ["bio", "languages", "domains", "location", "company_name"] as const;
+      const safeExtra: Record<string, unknown> = {};
+      for (const k of ALLOWED_EXTRA) {
+        if (extraData?.[k] !== undefined) safeExtra[k] = extraData[k];
+      }
+      const { error: upgradeError } = await supabase.from("users").update({
+        role: safeRole,
         full_name: fullName,
-        ...(extraData || {})
+        ...safeExtra
       }).eq("id", currentUser.id);
+      if (upgradeError) {
+        console.error("[Auth] role upgrade failed:", upgradeError.message);
+        return { error: "Failed to update profile. Please try again." };
+      }
 
       await fetchProfile(currentUser.id);
 
       if (!skipRedirect) {
-        if (role === "caster") router.push("/dashboard/caster");
-        else if (role === "company") router.push("/dashboard/company");
-        else if (role === "admin") router.push("/dashboard/admin");
-        else router.push("/");
+        router.push(getDashboardUrlForRole(safeRole));
       }
       return { error: null, user: currentUser };
     }
@@ -208,7 +287,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        data: { role, full_name: fullName },
+        data: { role: safeRole, full_name: fullName },
       },
     });
 
@@ -219,19 +298,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: error.message };
     }
     if (data.user) {
-      // Insert/upsert user profile
-      await supabase.from("users").upsert({
+      // Insert/upsert user profile — whitelist only, role fixed to safeRole
+      const ALLOWED_EXTRA = ["bio", "languages", "domains", "location", "company_name"] as const;
+      const safeExtra: Record<string, unknown> = {};
+      for (const k of ALLOWED_EXTRA) {
+        if (extraData?.[k] !== undefined) safeExtra[k] = extraData[k];
+      }
+      const { error: upsertError } = await supabase.from("users").upsert({
         id: data.user.id,
         email,
-        role,
+        role: safeRole,
         full_name: fullName,
-        ...(extraData || {})
+        ...safeExtra
       });
+      if (upsertError) {
+        console.error("[Auth] profile upsert failed:", upsertError.message);
+      }
       if (!skipRedirect) {
-        if (role === "caster") router.push("/dashboard/caster");
-        else if (role === "company") router.push("/dashboard/company");
-        else if (role === "admin") router.push("/dashboard/admin");
-        else router.push("/");
+        router.push(getDashboardUrlForRole(safeRole));
       }
     }
     return { error: null, user: data?.user };
@@ -248,19 +332,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 2. Client-side Supabase sign out
       await supabase.auth.signOut().catch(() => {});
 
-      // 3. Clear client-side document cookies as extra safety net
+      // 3. Clear client-side document cookies as extra safety net (non-HttpOnly only)
       if (typeof document !== "undefined") {
         document.cookie.split(";").forEach((c) => {
           const name = c.split("=")[0].trim();
-          if (name.includes("auth-token") || name.includes("token") || name.startsWith("sb-")) {
-            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+          if (name.startsWith("sb-") && name.includes("auth-token")) {
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax;`;
           }
         });
       }
     } catch (e) {
       console.error("Sign out error", e);
     } finally {
-      window.location.href = "/login";
+      router.replace("/login");
+      router.refresh();
     }
   };
 

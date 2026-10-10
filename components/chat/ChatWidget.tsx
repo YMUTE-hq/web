@@ -23,22 +23,59 @@ export default function ChatWidget() {
     activeConversationRef.current = activeConversation;
   }, [activeConversation]);
 
-  // Fetch conversations on load
+  // Badge is state-driven (not derived from the list) so it works before the
+  // full conversation list is lazily loaded.
+  const [unreadTotal, setUnreadTotal] = useState(0);
+  const listLoadedRef = useRef(false);
+  const conversationsRef = useRef<Conversation[]>([]);
   useEffect(() => {
-    if (!user) return;
+    conversationsRef.current = conversations;
+  }, [conversations]);
+
+  // Fetch unread badge count on load (cheap) — the full list loads lazily on
+  // first widget open (see effect below). Previously every page load pulled
+  // the entire conversation history just for the badge.
+  useEffect(() => {
+    if (!user) {
+      setConversations([]);
+      setUnreadTotal(0);
+      listLoadedRef.current = false;
+      return;
+    }
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch("/api/chat/unread");
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadTotal(data.total || 0);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchUnread();
+  }, [user]);
+
+  // Lazy-load the full conversation list on first open.
+  useEffect(() => {
+    if (!user || !isOpen || listLoadedRef.current) return;
     const fetchConversations = async () => {
       try {
         const res = await fetch("/api/chat/conversations");
         if (res.ok) {
           const data = await res.json();
           setConversations(data);
+          listLoadedRef.current = true;
+          setUnreadTotal(
+            (Array.isArray(data) ? data : []).reduce((acc: number, c: Conversation) => acc + (c.unreadCount || 0), 0)
+          );
         }
       } catch (err) {
         console.error(err);
       }
     };
     fetchConversations();
-  }, [user]);
+  }, [isOpen, user]);
 
   // Request browser notification permission on mount
   useEffect(() => {
@@ -65,38 +102,60 @@ export default function ChatWidget() {
         (payload: { new: ChatMessage }) => {
           const newMessage = payload.new;
           if (newMessage.sender_id !== user.id) {
-            setConversations((currentConvs) => {
-              const belongsToMe = currentConvs.some((c) => c.id === newMessage.conversation_id);
-              if (!belongsToMe) return currentConvs;
+            const current = conversationsRef.current;
+            const targetConv = current.find((c) => c.id === newMessage.conversation_id);
+            const isActive = activeConversationRef.current?.id === newMessage.conversation_id;
 
-              const targetConv = currentConvs.find((c) => c.id === newMessage.conversation_id);
-              const senderName = targetConv?.participant?.full_name || "New Message";
-
-              // Trigger native browser notification if tab is hidden or lacks focus
+            const notify = (title: string) => {
               if (
                 typeof window !== "undefined" &&
                 "Notification" in window &&
                 Notification.permission === "granted" &&
                 (document.visibilityState !== "visible" || !document.hasFocus())
               ) {
-                new Notification(senderName, {
+                new Notification(title, {
                   body: newMessage.message_text || "Sent an attachment",
                   icon: "/logo-icon.svg",
                 });
               }
+            };
 
-              return currentConvs.map((c) => {
+            if (!listLoadedRef.current || !targetConv) {
+              // List not loaded (or brand-new conversation): badge +1 and pull
+              // a fresh list if the widget has been opened before.
+              setUnreadTotal((t) => t + 1);
+              notify(targetConv?.participant?.full_name || "New Message");
+              if (listLoadedRef.current) {
+                fetch("/api/chat/conversations")
+                  .then((r) => (r.ok ? r.json() : []))
+                  .then((data) => {
+                    setConversations(data);
+                    setUnreadTotal(
+                      (Array.isArray(data) ? data : []).reduce(
+                        (acc: number, c: Conversation) => acc + (c.unreadCount || 0),
+                        0
+                      )
+                    );
+                  })
+                  .catch((e) => console.error(e));
+              }
+              return;
+            }
+
+            notify(targetConv.participant?.full_name || "New Message");
+            setConversations(
+              current.map((c) => {
                 if (c.id === newMessage.conversation_id) {
-                  const isCurrentlyActive = activeConversationRef.current?.id === c.id;
                   return {
                     ...c,
                     lastMessage: newMessage,
-                    unreadCount: isCurrentlyActive ? 0 : (c.unreadCount || 0) + 1,
+                    unreadCount: isActive ? 0 : (c.unreadCount || 0) + 1,
                   };
                 }
                 return c;
-              });
-            });
+              })
+            );
+            if (!isActive) setUnreadTotal((t) => t + 1);
           }
         }
       )
@@ -130,6 +189,13 @@ export default function ChatWidget() {
           const data = await res.json();
           setMessages(data);
           scrollToBottom();
+          // Server marked this conversation read — resync the badge.
+          fetch("/api/chat/unread")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+              if (d) setUnreadTotal(d.total || 0);
+            })
+            .catch(() => {});
         }
       } catch (err) {
         console.error("Error fetching messages:", err);
@@ -157,12 +223,10 @@ export default function ChatWidget() {
           if (newMessage.sender_id !== user.id) {
             setMessages((prev) => [...prev, newMessage]);
             scrollToBottom();
-            // Call API to mark as read in the database
-            try {
-              fetch(`/api/chat/messages?conversationId=${activeConversation.id}`);
-            } catch (err) {
-              console.error(err);
-            }
+            // Call API to mark as read in the database (fire-and-forget with error log)
+            fetch(`/api/chat/messages?conversationId=${activeConversation.id}`).catch((err) => {
+              console.error("[Chat] mark-as-read failed:", err);
+            });
           }
         }
       )
@@ -201,7 +265,7 @@ export default function ChatWidget() {
     scrollToBottom();
 
     try {
-      await fetch("/api/chat/send", {
+      const res = await fetch("/api/chat/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -209,16 +273,25 @@ export default function ChatWidget() {
           text: messageText,
         }),
       });
-      // The real message is saved. If we wanted, we could replace the temp id here, 
-      // but usually the next load or realtime sync resolves the exact data.
+      if (!res.ok) {
+        // Rollback optimistic message on failure
+        setMessages((prev) => prev.filter((m) => m.id !== tempMessage.id));
+        console.error("[Chat] send failed:", res.status);
+      } else {
+        const saved = await res.json().catch(() => null);
+        if (saved?.id) {
+          setMessages((prev) => prev.map((m) => (m.id === tempMessage.id ? saved : m)));
+        }
+      }
     } catch (err) {
+      setMessages((prev) => prev.filter((m) => m.id !== tempMessage.id));
       console.error("Failed to send message", err);
     }
   };
 
   if (!user) return null; // Don't render for logged out users
 
-  const totalUnread = conversations.reduce((acc, curr) => acc + (curr.unreadCount || 0), 0);
+  const totalUnread = unreadTotal;
 
   return (
     <div className="fixed bottom-6 right-6 z-[99]">

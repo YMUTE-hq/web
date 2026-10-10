@@ -17,19 +17,18 @@ export default function Footer() {
         <div>
           <h4 className="font-bold mb-6">Platform</h4>
           <ul className="space-y-4 text-white/60 text-sm">
-            <li><Link className="hover:text-primary transition-colors" href="/talents">Find Casters</Link></li>
+            <li><Link className="hover:text-primary transition-colors" href="/explore-talent">Find Casters</Link></li>
             <li><Link className="hover:text-primary transition-colors" href="/jobs">Browse Jobs</Link></li>
-            <li><Link className="hover:text-primary transition-colors" href="#">Pricing</Link></li>
-            <li><Link className="hover:text-primary transition-colors" href="#">Features</Link></li>
+            <li><Link className="hover:text-primary transition-colors" href="/community">Community</Link></li>
+            <li><Link className="hover:text-primary transition-colors" href="/games">Games</Link></li>
           </ul>
         </div>
         <div>
           <h4 className="font-bold mb-6">Company</h4>
           <ul className="space-y-4 text-white/60 text-sm">
-            <li><Link className="hover:text-primary transition-colors" href="/about">About Us</Link></li>
             <li><Link className="hover:text-primary transition-colors" href="/careers">Careers</Link></li>
-            <li><Link className="hover:text-primary transition-colors" href="#">Contact</Link></li>
-            <li><Link className="hover:text-primary transition-colors" href="#">Partners</Link></li>
+            <li><Link className="hover:text-primary transition-colors" href="/explore-talent">Explore Talent</Link></li>
+            <li><Link className="hover:text-primary transition-colors" href="/jobs">Jobs</Link></li>
           </ul>
         </div>
         <div>
@@ -50,9 +49,9 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 border-t border-white/5 pt-10 flex flex-col md:flex-row justify-between items-center gap-6">
         <p className="text-white/30 text-xs">© 2024 YMUTE. All rights reserved.</p>
         <div className="flex gap-8 text-white/30 text-xs">
-          <Link className="hover:text-white transition-colors" href="/privacy">Privacy Policy</Link>
-          <Link className="hover:text-white transition-colors" href="/terms">Terms of Service</Link>
-          <Link className="hover:text-white transition-colors" href="/cookies">Cookie Policy</Link>
+          <span>Privacy Policy</span>
+          <span>Terms of Service</span>
+          <span>Cookie Policy</span>
         </div>
       </div>
     </footer>

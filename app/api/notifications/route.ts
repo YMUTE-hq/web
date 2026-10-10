@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { getSessionUser } from "@/lib/viewer";
 import { getErrorMessage } from "@/types";
 
 export async function GET() {
   try {
-    const supabase = await createClient();
-    const { data: authData } = await supabase.auth.getUser();
-    const user = authData?.user;
+    const user = await getSessionUser();
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from("notifications")
@@ -42,7 +43,7 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const { id, all } = body;
 
-    if (all) {
+    if (all === true) {
       const { data, error } = await supabase
         .from("notifications")
         .update({ read: true })

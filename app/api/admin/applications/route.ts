@@ -1,21 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AdminService } from "@/backend/services/AdminService";
-import { createClient } from "@/lib/supabase-server";
+import { requireAdmin } from "@/backend/middleware/auth";
 import { getErrorMessage } from "@/types";
-
-async function requireAdmin(_req?: NextRequest) {
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase.auth.getUser();
-    const user = data?.user;
-    if (!user) return null;
-    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
-    if (profile?.role !== "admin") return null;
-    return user;
-  } catch (error: unknown) {
-    throw error;
-  }
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -37,6 +23,10 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const { id, status } = body;
     if (!id || !status) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    const ALLOWED = ["pending", "accepted", "rejected", "withdrawn"];
+    if (!ALLOWED.includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
     const result = await AdminService.overrideApplicationStatus(id, status);
     return NextResponse.json(result);
   } catch (error: unknown) {

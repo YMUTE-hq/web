@@ -12,7 +12,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
 
   const totalRevenue = payments
     .filter((p) => p.status === "paid")
-    .reduce((sum: number, p) => sum + (p.amount || 0), 0);
+    .reduce((sum: number, p) => sum + (Number(p.amount) || 0), 0);
 
   return (
     <main className="flex-1 h-full overflow-y-auto p-8 lg:p-12">

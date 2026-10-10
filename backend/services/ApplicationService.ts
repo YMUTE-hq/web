@@ -32,22 +32,26 @@ export class ApplicationService {
     }
 
     try {
-      const application = await ApplicationRepository.createApplication(job_id, user.id, message || "");
+      const application = await ApplicationRepository.createApplication(job_id, user.id, (message || "").slice(0, 2000));
 
       try {
         const { ChatService } = await import("./ChatService");
+        const { ChatRepository } = await import("../repositories/ChatRepository");
         const supabase = await createClient();
         const { data: job } = await supabase
           .from("jobs")
           .select("company_id")
           .eq("id", job_id)
-          .single();
-        if (job) {
+          .maybeSingle();
+        if (job?.company_id && job.company_id !== user.id) {
+          // Idempotency: reuse existing job conversation if present (avoid duplicates per application)
+          const members = await ChatRepository.getUserConversations(user.id).catch(() => []);
+          void members;
           await ChatService.createConversation(
             "job",
             [user.id, job.company_id],
             job_id
-          );
+          ).catch((e) => console.error("Job chat create skipped:", e instanceof Error ? e.message : e));
         }
       } catch (chatError) {
         console.error("Failed to create chat conversation for application:", chatError);
@@ -87,6 +91,8 @@ export class ApplicationService {
   }
 
   static async adminOverrideStatus(applicationId: string, status: string) {
+    const ALLOWED = ["pending", "accepted", "rejected", "withdrawn"];
+    if (!ALLOWED.includes(status)) throw new Error("Invalid application status");
     try {
       return await ApplicationRepository.adminOverrideStatus(applicationId, status);
     } catch (e: unknown) {

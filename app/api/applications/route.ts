@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   // Tier 1 Rate Limit: Max 5 application submissions per hour per IP
-  const rateCheck = checkRateLimit(request, {
+  const rateCheck = await checkRateLimit(request, {
     prefix: "application_submit",
     limit: 5,
     windowMs: 60 * 60 * 1000,

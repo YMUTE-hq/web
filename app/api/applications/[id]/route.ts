@@ -17,15 +17,19 @@ export async function PATCH(
 
     const body = await request.json();
     const { status } = body;
+    if (!["accepted", "rejected"].includes(status)) {
+      return NextResponse.json({ error: "Invalid status. Must be 'accepted' or 'rejected'." }, { status: 400 });
+    }
 
     const { data: app } = await supabase
       .from("applications")
-      .select("job_id, caster_id, jobs(company_id)")
+      .select("job_id, caster_id, jobs!inner(company_id)")
       .eq("id", id)
-      .single() as { data: { job_id: string; caster_id: string; jobs: { company_id: string } } | null };
+      .single() as { data: { job_id: string; caster_id: string; jobs: { company_id: string } | { company_id: string }[] } | null };
 
     if (!app) return NextResponse.json({ error: "Application not found" }, { status: 404 });
-    if ((app.jobs as { company_id: string })?.company_id !== user.id) {
+    const jobsRel = Array.isArray(app.jobs) ? app.jobs[0] : app.jobs;
+    if (!jobsRel || jobsRel.company_id !== user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 

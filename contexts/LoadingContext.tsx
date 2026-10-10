@@ -26,12 +26,12 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, [pathname, searchParams]);
 
-  // Safety net: Auto-dismiss loader after 5 seconds to prevent frozen spinners
+  // Safety net: Auto-dismiss loader after 20 seconds to prevent frozen spinners on extreme timeouts
   useEffect(() => {
     if (isLoading) {
       const timer = setTimeout(() => {
         setIsLoading(false);
-      }, 5000);
+      }, 20000);
       return () => clearTimeout(timer);
     }
   }, [isLoading]);
@@ -49,14 +49,22 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
     setLoadingLabel(label);
     setIsLoading(true);
     try {
-      await new Promise((resolve) => {
-        startTransition(async () => {
-          await action();
-          resolve(true);
-        });
+      let actionError: unknown = null;
+      startTransition(() => {
+        Promise.resolve()
+          .then(() => action())
+          .catch((e) => {
+            actionError = e;
+            console.error("[Loading] action failed:", e);
+          })
+          .finally(() => setIsLoading(false));
       });
-    } finally {
+      // Fallback: if transition never runs (e.g. test env), ensure we still await
+      await Promise.resolve();
+      if (actionError) throw actionError;
+    } catch (e) {
       setIsLoading(false);
+      throw e;
     }
   };
 

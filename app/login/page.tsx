@@ -33,11 +33,11 @@ export default function LoginPage() {
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval>;
+    let timer: ReturnType<typeof setInterval> | undefined;
     if (cooldown > 0) {
       timer = setInterval(() => setCooldown((c) => c - 1), 1000);
     }
-    return () => clearInterval(timer);
+    return () => { if (timer) clearInterval(timer); };
   }, [cooldown]);
 
   // 1. Submit Login
