@@ -6,11 +6,14 @@ export class JobController {
   static async getJobs(req: Request) {
     try {
       const { searchParams } = new URL(req.url);
+      const rawLimit = searchParams.get("limit");
+      const parsed = rawLimit ? parseInt(rawLimit, 10) : 20;
+      const limit = Number.isFinite(parsed) ? Math.min(Math.max(1, parsed), 50) : 20;
       const filters = {
         domain: searchParams.get("domain"),
         language: searchParams.get("language"),
         search: searchParams.get("search"),
-        limit: parseInt(searchParams.get("limit") || "20", 10),
+        limit,
       };
 
       const jobs = await JobService.getOpenJobs(filters);

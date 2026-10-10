@@ -38,11 +38,15 @@ export default function CasterProfilePage() {
     e.preventDefault();
     if (!user) return;
     try {
-      await supabase.from("users").update({
+      const { error: saveError } = await supabase.from("users").update({
         full_name: form.full_name, bio: form.bio,
         languages: form.languages.split(",").map((s) => s.trim()).filter(Boolean),
         domains: form.domains.split(",").map((s) => s.trim()).filter(Boolean),
       }).eq("id", user.id);
+      if (saveError) {
+        console.error("[Profile] save failed:", saveError.message);
+        return;
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -60,7 +64,11 @@ export default function CasterProfilePage() {
       fd.append("resource_type", "auto");
       fd.append("field", "audio_sample_url");
       const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.error) {
+        console.error("[Profile] upload failed:", data?.error || res.status);
+        return;
+      }
       if (data.url) setAudioUrl(data.url);
     } catch (err) {
       console.error(err);

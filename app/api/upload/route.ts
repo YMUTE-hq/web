@@ -78,7 +78,7 @@ const FOLDER_TO_CONFIG_KEY: Record<string, string> = {
 export async function POST(request: NextRequest) {
   try {
     // Tier 1 Rate Limit: Max 5 uploads per 10 minutes per IP
-    const rateCheck = checkRateLimit(request, {
+    const rateCheck = await checkRateLimit(request, {
       prefix: "upload",
       limit: 5,
       windowMs: 10 * 60 * 1000,
@@ -141,11 +141,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. MIME type check (if browser provided a MIME type)
-    if (file.type && !config.allowedMimeTypes.includes(file.type.toLowerCase())) {
+    // 3. MIME type check — always enforce (empty file.type must not bypass)
+    const normalizedMime = (file.type || "").toLowerCase();
+    if (!normalizedMime || !config.allowedMimeTypes.includes(normalizedMime)) {
       return NextResponse.json(
         {
-          error: `Invalid file type '${file.type}'. Allowed formats for ${config.label}: ${config.allowedExtensions.join(", ")}`,
+          error: `Invalid file type '${file.type || "unknown"}'. Allowed formats for ${config.label}: ${config.allowedExtensions.join(", ")}`,
         },
         { status: 400 }
       );
@@ -159,8 +160,12 @@ export async function POST(request: NextRequest) {
     const url = await uploadToCloudinary(buffer, config.folder, config.resourceType);
 
     // Update user profile if targeting an approved profile field
-    if (fieldParam && Object.keys(UPLOAD_CONFIGS).includes(fieldParam)) {
-      await supabase.from("users").update({ [fieldParam]: url }).eq("id", user.id);
+    if (fieldParam && fieldParam in UPLOAD_CONFIGS) {
+      const { error: profileError } = await supabase.from("users").update({ [fieldParam]: url }).eq("id", user.id);
+      if (profileError) {
+        console.error("[Upload] profile update failed:", profileError.message);
+        return NextResponse.json({ error: "Upload succeeded but profile update failed" }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ url });

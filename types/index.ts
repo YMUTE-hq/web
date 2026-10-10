@@ -18,7 +18,8 @@ export interface UserProfile {
   languages: string[] | null;
   domains: string[] | null;
   audio_sample_url: string | null;
-  rating: number;
+  // PostgREST returns NUMERIC as string — accept both, parse at use sites.
+  rating: number | string;
   company_name: string | null;
   company_logo_url: string | null;
   company_verification_doc_url: string | null;
@@ -58,9 +59,8 @@ export interface Application {
   message: string | null;
   status: ApplicationStatus;
   created_at: string;
-  job?: Job | null;
+  // Canonical joined shapes (plural, matching Supabase embeds). Singular aliases removed to prevent undefined crashes.
   jobs?: Partial<Job> | null;
-  caster?: UserProfile | null;
   users?: Partial<UserProfile> | null;
 }
 
@@ -68,12 +68,11 @@ export interface Payment {
   id: string;
   job_id: string;
   caster_id: string;
-  amount: number | null;
+  // NUMERIC arrives as string from PostgREST — coerce with Number() at use sites.
+  amount: number | string | null;
   status: string | null;
   created_at: string;
-  job?: Job | null;
   jobs?: Partial<Job> | null;
-  caster?: UserProfile | null;
   users?: Partial<UserProfile> | null;
 }
 
@@ -81,7 +80,7 @@ export interface NotificationItem {
   id: string;
   user_id: string;
   message: string;
-  read: boolean;
+  read: boolean | null;
   type?: string;
   link?: string | null;
   created_at: string;

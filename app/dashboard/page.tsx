@@ -27,14 +27,19 @@ export default function DashboardRouter() {
       return;
     }
 
-    // If user is authenticated but profile query is still resolving, hold loading state
+    // If user is authenticated but profile query is still resolving, hold loading state.
+    // Use a ref-style guard so the timeout sees the latest profile value.
+    let cancelled = false;
     const timer = setTimeout(() => {
-      if (!profile) {
+      if (!cancelled) {
         setErrorState("Unable to load profile. Please try signing in again.");
       }
     }, 6000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [user, profile, loading, router]);
 
   if (errorState) {

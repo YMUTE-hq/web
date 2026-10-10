@@ -1,3 +1,4 @@
+import { getSessionUser } from "@/lib/viewer";
 import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -13,42 +14,36 @@ type Application = {
 export const dynamic = "force-dynamic";
 
 export default async function CasterDashboardPage() {
+  // Single-window fetch: session id comes free from the middleware header,
+  // profile + both application queries run concurrently, role is enforced
+  // after (redirect). Previously: getUser → profile → apps → stats, sequential.
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
   const supabase = await createClient();
-  
-  let user = null;
-  let profile = null;
-  let rawApps = [];
-  let allApps = [];
 
-  try {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-    user = authData.user;
-    if (!user || authError) throw new Error("Auth failed");
-
-    const { data: p } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-    profile = p;
-
-    const { data: rApps } = await supabase
+  const [profileRes, recentRes, statsRes] = await Promise.all([
+    supabase.from("users").select("*").eq("id", user.id).maybeSingle(),
+    supabase
       .from("applications")
       .select("id, status, created_at, jobs(title, event_date)")
       .eq("caster_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(5);
-    rawApps = rApps || [];
+      .limit(5),
+    supabase.from("applications").select("status").eq("caster_id", user.id),
+  ]);
 
-    const { data: aApps } = await supabase
-      .from("applications")
-      .select("status")
-      .eq("caster_id", user.id);
-    allApps = aApps || [];
-  } catch (error) {
-    console.error("Dashboard fetch error:", error);
-    redirect("/login");
+  const profile = profileRes.data;
+  const role = (profile as { role?: string } | null)?.role;
+  if (role !== "caster") {
+    redirect(role === "company" ? "/dashboard/company" : role === "admin" ? "/dashboard/admin" : "/");
   }
+
+  if (recentRes.error || statsRes.error) {
+    console.error("Dashboard fetch error:", recentRes.error || statsRes.error);
+  }
+
+  const rawApps = recentRes.data || [];
+  const allApps = statsRes.data || [];
 
   const applications = (rawApps as unknown as Application[]) || [];
   

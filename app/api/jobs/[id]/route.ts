@@ -81,7 +81,12 @@ export async function PATCH(
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      const code = (error as { code?: string }).code;
+      if (code === "PGRST116") return NextResponse.json({ error: "Job not found" }, { status: 404 });
+      if (code === "42501") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json({ error: "Update failed" }, { status: 500 });
+    }
     return NextResponse.json(data);
   } catch (error: unknown) {
     return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });

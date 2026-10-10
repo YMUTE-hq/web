@@ -23,6 +23,10 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const { id, status } = body;
     if (!id || !status) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    const ALLOWED = ["pending", "accepted", "rejected", "withdrawn"];
+    if (!ALLOWED.includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
     const result = await AdminService.overrideApplicationStatus(id, status);
     return NextResponse.json(result);
   } catch (error: unknown) {

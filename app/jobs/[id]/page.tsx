@@ -46,10 +46,16 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     const fetchJobDetails = async () => {
       try {
         const res = await fetch(`/api/jobs/${id}`);
+        if (!res.ok) {
+          setJob(null);
+          return;
+        }
         const data = await res.json();
-        setJob(data);
+        if (data?.error) setJob(null);
+        else setJob(data);
       } catch (err) {
         console.error(err);
+        setJob(null);
       } finally {
         setLoading(false);
       }

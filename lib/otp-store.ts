@@ -48,9 +48,61 @@ export async function verifyOtpCode(
   rawOtp: string
 ): Promise<{ success: boolean; error?: string; resetToken?: string }> {
   const cleanEmail = email.toLowerCase().trim();
+  const incomingHash = crypto.createHash("sha256").update(rawOtp.trim()).digest("hex");
   const supabase = createAdminClient();
 
-  // Find the latest active reset request for this email
+  // 1. Primary: Atomic PostgreSQL Verification via RPC (eliminates TOCTOU race conditions)
+  try {
+    const { data, error } = await supabase.rpc("verify_and_increment_otp_attempt", {
+      p_email: cleanEmail,
+      p_otp_hash: incomingHash,
+      p_max_attempts: 5,
+    });
+
+    if (!error && data) {
+      if (data.status === "MATCH") {
+        const resetToken = crypto.randomBytes(32).toString("hex");
+        const resetHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+        const resetExpiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+        const { error: tokErr } = await supabase
+          .from("password_resets")
+          .update({ reset_token: resetHash, expires_at: resetExpiresAt })
+          .eq("id", data.id);
+        if (tokErr) {
+          console.error("[OTP] reset token store failed:", tokErr.message);
+          return { success: false, error: "Failed to generate reset session. Please try again." };
+        }
+        return { success: true, resetToken };
+      }
+
+      if (data.status === "EXPIRED") {
+        return { success: false, error: "This verification code has expired. Please request a new code." };
+      }
+
+      if (data.status === "MAX_ATTEMPTS_EXCEEDED") {
+        return { success: false, error: "Maximum verification attempts exceeded. Please request a new code." };
+      }
+
+      if (data.status === "MISMATCH") {
+        const remaining = typeof data.remaining === "number" ? data.remaining : 0;
+        return {
+          success: false,
+          error: `Invalid verification code. ${remaining > 0 ? `${remaining} attempts remaining.` : "Code invalidated."}`,
+        };
+      }
+
+      if (data.status === "NOT_FOUND") {
+        return {
+          success: false,
+          error: "No active verification request found for this email. Please request a new code.",
+        };
+      }
+    }
+  } catch (_rpcErr) {
+    // Fallback if RPC is refreshing or unavailable
+  }
+
+  // 2. Direct DB Fallback with attempt limit guard
   const { data: record, error } = await supabase
     .from("password_resets")
     .select("*")
@@ -85,9 +137,11 @@ export async function verifyOtpCode(
     };
   }
 
-  // Verify hash
-  const incomingHash = crypto.createHash("sha256").update(rawOtp.trim()).digest("hex");
-  if (incomingHash !== record.otp_hash) {
+  // Verify hash — constant-time compare to avoid timing oracle
+  const a = Buffer.from(incomingHash, "hex");
+  const b = Buffer.from(String(record.otp_hash), "hex");
+  const match = a.length === b.length && crypto.timingSafeEqual(a, b);
+  if (!match) {
     const newAttempts = (record.attempts || 0) + 1;
     await supabase
       .from("password_resets")
@@ -101,11 +155,13 @@ export async function verifyOtpCode(
     };
   }
 
-  // Generate One-Time Cryptographic Reset Token
+  // Generate One-Time Cryptographic Reset Token (store only sha256 hash)
   const resetToken = crypto.randomBytes(32).toString("hex");
+  const resetHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+  const resetExpiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
   const { error: updateError } = await supabase
     .from("password_resets")
-    .update({ reset_token: resetToken })
+    .update({ reset_token: resetHash, expires_at: resetExpiresAt })
     .eq("id", record.id);
 
   if (updateError) {
@@ -125,12 +181,13 @@ export async function validateResetToken(
 ): Promise<{ valid: boolean; error?: string }> {
   const cleanEmail = email.toLowerCase().trim();
   const supabase = createAdminClient();
+  const tokenHash = crypto.createHash("sha256").update(String(resetToken)).digest("hex");
 
   const { data: record, error } = await supabase
     .from("password_resets")
     .select("*")
     .eq("email", cleanEmail)
-    .eq("reset_token", resetToken)
+    .eq("reset_token", tokenHash)
     .eq("used", false)
     .maybeSingle();
 
@@ -158,10 +215,11 @@ export async function validateResetToken(
 export async function consumeResetToken(email: string, resetToken: string): Promise<void> {
   const cleanEmail = email.toLowerCase().trim();
   const supabase = createAdminClient();
+  const tokenHash = crypto.createHash("sha256").update(String(resetToken)).digest("hex");
 
   await supabase
     .from("password_resets")
     .update({ used: true })
     .eq("email", cleanEmail)
-    .eq("reset_token", resetToken);
+    .eq("reset_token", tokenHash);
 }

@@ -9,7 +9,7 @@ import { checkRateLimit } from "@/lib/rate-limiter";
 export async function POST(req: NextRequest) {
   try {
     // 1. Unified Sliding-Window Rate Limit: Max 5 attempts per 15 minutes per IP
-    const rateCheck = checkRateLimit(req, {
+    const rateCheck = await checkRateLimit(req, {
       prefix: "forgot-password",
       limit: 5,
       windowMs: 15 * 60 * 1000,
@@ -34,8 +34,11 @@ export async function POST(req: NextRequest) {
       .eq("email", cleanEmail)
       .maybeSingle();
 
-    // Anti-User Enumeration: Return uniform success response even if account doesn't exist
+    // Anti-User Enumeration: Mitigate timing side-channel via simulated crypto & delay
     if (!userProfile) {
+      crypto.createHash("sha256").update(crypto.randomBytes(32)).digest("hex");
+      await new Promise((resolve) => setTimeout(resolve, 350 + Math.floor(Math.random() * 100)));
+
       return NextResponse.json({
         success: true,
         message: "If an account exists with this email address, a verification code has been sent.",
@@ -54,7 +57,8 @@ export async function POST(req: NextRequest) {
           identities.some((id: { provider: string }) => id.provider === "google"));
 
       if (isOAuthOnly) {
-        // Send email notice reminding user to sign in with Google
+        // Send email notice reminding user to sign in with Google.
+        // Generic response (no isOAuth oracle) to preserve anti-enumeration.
         await sendOAuthAccountNotification({
           email: cleanEmail,
           name: userProfile.full_name || undefined,
@@ -63,10 +67,8 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
           success: true,
-          isOAuth: true,
-          provider: "Google",
           message:
-            "Your account is registered with Google Sign-In. We sent sign-in instructions to your email. Please use 'Continue with Google'.",
+            "If an account exists with this email address, a verification code has been sent.",
         });
       }
     } catch (_oauthCheckErr) {

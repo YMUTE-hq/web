@@ -6,10 +6,19 @@ export class AdminRepository {
   }
 
   // ─── USERS ───────────────────────────────────────────
-  static async getAllUsers(filters?: { role?: string; search?: string }) {
+  static async getAllUsers(filters?: { role?: string; search?: string; limit?: number; offset?: number }) {
     let query = this.db.from("users").select("*").order("created_at", { ascending: false });
     if (filters?.role) query = query.eq("role", filters.role);
-    if (filters?.search) query = query.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+    if (filters?.search) {
+      const safe = String(filters.search).replace(/[\\%,_()"]/g, "\\$&").slice(0, 100);
+      query = query.or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`);
+    }
+    const limit = filters?.limit ? Math.min(Math.max(1, filters.limit), 100) : 100;
+    if (typeof filters?.offset === "number" && filters.offset >= 0) {
+      query = query.range(filters.offset, filters.offset + limit - 1);
+    } else {
+      query = query.limit(limit);
+    }
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return data;
@@ -28,13 +37,22 @@ export class AdminRepository {
   }
 
   // ─── JOBS ────────────────────────────────────────────
-  static async getAllJobs(filters?: { status?: string; search?: string }) {
+  static async getAllJobs(filters?: { status?: string; search?: string; limit?: number; offset?: number }) {
     let query = this.db
       .from("jobs")
       .select("*, users!company_id(company_name, email)")
       .order("created_at", { ascending: false });
     if (filters?.status) query = query.eq("status", filters.status);
-    if (filters?.search) query = query.ilike("title", `%${filters.search}%`);
+    if (filters?.search) {
+      const safe = String(filters.search).replace(/[\\%,_()"]/g, "\\$&").slice(0, 100);
+      query = query.ilike("title", `%${safe}%`);
+    }
+    const limit = filters?.limit ? Math.min(Math.max(1, filters.limit), 100) : 100;
+    if (typeof filters?.offset === "number" && filters.offset >= 0) {
+      query = query.range(filters.offset, filters.offset + limit - 1);
+    } else {
+      query = query.limit(limit);
+    }
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return data;
@@ -53,12 +71,18 @@ export class AdminRepository {
   }
 
   // ─── APPLICATIONS ────────────────────────────────────
-  static async getAllApplications(filters?: { status?: string }) {
+  static async getAllApplications(filters?: { status?: string; limit?: number; offset?: number }) {
     let query = this.db
       .from("applications")
       .select("*, jobs(id, title, domain), users!caster_id(id, full_name, email, avatar_url)")
       .order("created_at", { ascending: false });
     if (filters?.status) query = query.eq("status", filters.status);
+    const limit = filters?.limit ? Math.min(Math.max(1, filters.limit), 100) : 100;
+    if (typeof filters?.offset === "number" && filters.offset >= 0) {
+      query = query.range(filters.offset, filters.offset + limit - 1);
+    } else {
+      query = query.limit(limit);
+    }
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return data;
@@ -77,12 +101,18 @@ export class AdminRepository {
   }
 
   // ─── PAYMENTS ────────────────────────────────────────
-  static async getAllPayments(filters?: { status?: string }) {
+  static async getAllPayments(filters?: { status?: string; limit?: number; offset?: number }) {
     let query = this.db
       .from("payments")
       .select("*, jobs(title), users!caster_id(full_name, email)")
       .order("created_at", { ascending: false });
     if (filters?.status) query = query.eq("status", filters.status);
+    const limit = filters?.limit ? Math.min(Math.max(1, filters.limit), 100) : 100;
+    if (typeof filters?.offset === "number" && filters.offset >= 0) {
+      query = query.range(filters.offset, filters.offset + limit - 1);
+    } else {
+      query = query.limit(limit);
+    }
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return data;
@@ -95,12 +125,18 @@ export class AdminRepository {
   }
 
   // ─── REPORTS ─────────────────────────────────────────
-  static async getAllReports(filters?: { status?: string }) {
+  static async getAllReports(filters?: { status?: string; limit?: number; offset?: number }) {
     let query = this.db
       .from("reports")
       .select("*, users!reporter_id(full_name, email)")
       .order("created_at", { ascending: false });
     if (filters?.status) query = query.eq("status", filters.status);
+    const limit = filters?.limit ? Math.min(Math.max(1, filters.limit), 100) : 100;
+    if (typeof filters?.offset === "number" && filters.offset >= 0) {
+      query = query.range(filters.offset, filters.offset + limit - 1);
+    } else {
+      query = query.limit(limit);
+    }
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return data;
@@ -177,7 +213,7 @@ export class AdminRepository {
 
     const totalRevenue = payments.data
       ?.filter((p) => p.status === "paid")
-      .reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
 
     return {
       totalUsers: users.count || 0,

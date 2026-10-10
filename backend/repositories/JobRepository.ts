@@ -10,16 +10,25 @@ export interface JobFilters {
 export class JobRepository {
   static async getOpenJobs(filters: JobFilters) {
     const supabase = await createClient();
+    const limit = filters.limit && Number.isFinite(filters.limit)
+      ? Math.min(Math.max(1, Math.floor(filters.limit)), 50)
+      : 20;
     let query = supabase
       .from("jobs")
       .select("*, users!company_id(id, full_name, company_name, avatar_url, verification_status)")
       .eq("status", "open")
       .order("created_at", { ascending: false })
-      .limit(filters.limit || 20);
+      .limit(limit);
 
     if (filters.domain) query = query.eq("domain", filters.domain);
-    if (filters.language) query = query.ilike("language", `%${filters.language}%`);
-    if (filters.search) query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+    if (filters.language) {
+      const safe = String(filters.language).replace(/[\\%,_()"]/g, "\\$&").slice(0, 100);
+      query = query.ilike("language", `%${safe}%`);
+    }
+    if (filters.search) {
+      const safe = String(filters.search).replace(/[\\%,_()"]/g, "\\$&").slice(0, 100);
+      query = query.or(`title.ilike.%${safe}%,description.ilike.%${safe}%`);
+    }
 
     const { data, error } = await query;
     if (error) {

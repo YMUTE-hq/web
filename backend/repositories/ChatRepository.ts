@@ -9,41 +9,70 @@ export class ChatRepository {
       .select("conversation_id")
       .eq("user_id", userId);
 
-    if (memberError || !members.length) return [];
+    if (memberError || !members || members.length === 0) return [];
 
     const conversationIds = members.map((m) => m.conversation_id);
 
-    const { data, error } = await supabase
-      .from("conversations")
-      .select(`
-        id,
-        type,
-        created_at,
-        conversation_members (
-          user_id,
-          users (
-            id,
-            full_name,
-            avatar_url,
-            role
-          )
-        ),
-        messages (
+    // Conversations + members, WITHOUT the unbounded messages embed (previously
+    // fetched the entire history of every conversation on each call).
+    // Last-message + unread counts come from two small bounded queries below,
+    // all three issued concurrently.
+    const [convosRes, recentRes, unreadRes] = await Promise.all([
+      supabase
+        .from("conversations")
+        .select(`
           id,
-          message_text,
+          type,
           created_at,
-          seen,
-          sender_id
-        )
-      `)
-      .in("id", conversationIds)
-      .order("created_at", { ascending: false });
+          conversation_members (
+            user_id,
+            users (
+              id,
+              full_name,
+              avatar_url,
+              role
+            )
+          )
+        `)
+        .in("id", conversationIds)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("messages")
+        .select("id, conversation_id, message_text, created_at, seen, sender_id")
+        .in("conversation_id", conversationIds)
+        .order("created_at", { ascending: false })
+        .limit(60),
+      supabase
+        .from("messages")
+        .select("conversation_id")
+        .in("conversation_id", conversationIds)
+        .eq("seen", false)
+        .neq("sender_id", userId)
+        .limit(1000),
+    ]);
 
-    if (error) {
-      console.error("Error fetching conversations:", error);
+    if (convosRes.error) {
+      console.error("Error fetching conversations:", convosRes.error);
       return [];
     }
-    return data;
+
+    // Latest message per conversation (rows already newest-first).
+    const latestByConvo = new Map<string, NonNullable<typeof recentRes.data>[number]>();
+    for (const m of recentRes.data || []) {
+      if (!latestByConvo.has(m.conversation_id)) latestByConvo.set(m.conversation_id, m);
+    }
+    const unreadByConvo = new Map<string, number>();
+    for (const m of unreadRes.data || []) {
+      unreadByConvo.set(m.conversation_id, (unreadByConvo.get(m.conversation_id) || 0) + 1);
+    }
+
+    return (convosRes.data || []).map((conv) => ({
+      ...conv,
+      messages: latestByConvo.has((conv as { id: string }).id)
+        ? [latestByConvo.get((conv as { id: string }).id)]
+        : [],
+      __unreadCount: unreadByConvo.get((conv as { id: string }).id) || 0,
+    }));
   }
 
   static async getMessages(conversationId: string) {
@@ -105,7 +134,7 @@ export class ChatRepository {
     
     const { data: conv, error: convError } = await supabase
       .from("conversations")
-      .insert([{ type, job_id: jobId }])
+      .insert([{ type, job_id: jobId ?? null }])
       .select()
       .single();
 

@@ -49,14 +49,22 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
     setLoadingLabel(label);
     setIsLoading(true);
     try {
-      await new Promise((resolve) => {
-        startTransition(async () => {
-          await action();
-          resolve(true);
-        });
+      let actionError: unknown = null;
+      startTransition(() => {
+        Promise.resolve()
+          .then(() => action())
+          .catch((e) => {
+            actionError = e;
+            console.error("[Loading] action failed:", e);
+          })
+          .finally(() => setIsLoading(false));
       });
-    } finally {
+      // Fallback: if transition never runs (e.g. test env), ensure we still await
+      await Promise.resolve();
+      if (actionError) throw actionError;
+    } catch (e) {
       setIsLoading(false);
+      throw e;
     }
   };
 

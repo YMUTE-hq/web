@@ -53,7 +53,9 @@ export default function LandingPageClient() {
           .order("created_at", { ascending: false })
           .limit(3);
         if (data) setRecentJobs(data as unknown as Job[]);
-      } catch {}
+      } catch (e) {
+        console.error("[Landing] jobs fetch failed:", e);
+      }
     })();
 
     (async () => {
@@ -65,7 +67,9 @@ export default function LandingPageClient() {
           .order("created_at", { ascending: false })
           .limit(4);
         if (data) setRecentCasters(data as Partial<UserProfile>[]);
-      } catch {}
+      } catch (e) {
+        console.error("[Landing] casters fetch failed:", e);
+      }
     })();
 
     (async () => {
@@ -77,7 +81,9 @@ export default function LandingPageClient() {
           .order("created_at", { ascending: false })
           .limit(2);
         if (data) setCommunityVoices(data as unknown as CommunityVoice[]);
-      } catch {}
+      } catch (e) {
+        console.error("[Landing] ratings fetch failed:", e);
+      }
     })();
   }, []);
 
@@ -152,7 +158,7 @@ export default function LandingPageClient() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {domains.map((d) => (
-              <Link key={d.slug} href={`/explore-talent?domain=${d.name}`} className="block">
+              <Link key={d.slug} href={`/explore-talent?domain=${encodeURIComponent(d.name)}`} className="block">
                 <motion.div 
                   whileHover={{ y: -5 }}
                   className="clay-card p-8 rounded-2xl shadow-clay flex flex-col items-center text-center group cursor-pointer h-full"
@@ -192,7 +198,7 @@ export default function LandingPageClient() {
                   <p className="text-primary text-sm font-semibold mb-2">{caster.domains?.[0] || "General"} • {caster.languages?.[0] || "English"}</p>
                   <div className="flex items-center gap-1 text-yellow-500 mb-6">
                     <Star className="w-4 h-4 fill-current"/>
-                    <span className="text-sm font-bold text-navy-deep">{caster.rating || "New"}</span>
+                    <span className="text-sm font-bold text-navy-deep">{caster.rating ?? "New"}</span>
                   </div>
                   <Link href={`/explore-talent/${caster.id}`} className="w-full py-2.5 clay-btn-secondary rounded-lg text-sm font-bold text-navy-deep group-hover:bg-primary group-hover:text-white transition-all text-center block">View Profile</Link>
                 </div>

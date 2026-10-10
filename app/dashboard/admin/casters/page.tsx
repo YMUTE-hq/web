@@ -45,10 +45,10 @@ export default async function AdminCastersPage({ searchParams }: { searchParams:
                   {caster.is_featured && <span className="text-primary text-xs font-bold shrink-0">★ Featured</span>}
                 </div>
                 <p className="text-xs text-slate-500">{caster.email}</p>
-                {caster.rating > 0 && (
+                {Number(caster.rating) > 0 && (
                   <div className="flex items-center gap-1 mt-1">
                     <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                    <span className="text-xs font-bold text-slate-700">{caster.rating}</span>
+                    <span className="text-xs font-bold text-slate-700">{String(caster.rating)}</span>
                   </div>
                 )}
               </div>

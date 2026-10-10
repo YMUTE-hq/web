@@ -39,7 +39,7 @@ export async function GET(request: Request) {
           data.user.user_metadata?.picture ||
           null;
 
-        await supabase.from("users").upsert({
+        const { error: upsertError } = await supabase.from("users").upsert({
           id: data.user.id,
           email: data.user.email,
           full_name: fullName,
@@ -47,10 +47,13 @@ export async function GET(request: Request) {
           role: role,
           created_at: new Date().toISOString(),
         });
+        if (upsertError) {
+          console.error("[OAuth Callback] profile upsert failed:", upsertError.message);
+        }
       }
 
-      // 3. Dynamic redirection
-      if (next) {
+      // 3. Dynamic redirection — same-origin paths only (open-redirect fix)
+      if (next && next.startsWith("/") && !next.startsWith("//") && !next.includes("://")) {
         return NextResponse.redirect(`${origin}${next}`);
       }
 

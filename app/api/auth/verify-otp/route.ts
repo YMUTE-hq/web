@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyOtpCode } from "@/lib/otp-store";
+import { checkRateLimit } from "@/lib/rate-limiter";
 import { getErrorMessage } from "@/types";
 
 export async function POST(req: NextRequest) {
   try {
+    // Sliding-window rate limit: Max 10 OTP verifications per 10 minutes per IP
+    const rateCheck = await checkRateLimit(req, {
+      prefix: "verify-otp",
+      limit: 10,
+      windowMs: 10 * 60 * 1000,
+    });
+
+    if (!rateCheck.allowed && rateCheck.response) {
+      return rateCheck.response;
+    }
+
     const { email, otp } = await req.json();
 
-    if (!email || !otp || typeof otp !== "string" || otp.trim().length !== 6) {
+    if (typeof email !== "string" || !email.includes("@") || typeof otp !== "string" || otp.trim().length !== 6) {
       return NextResponse.json(
-        { error: "Please enter the 6-digit verification OTP code." },
+        { error: "Please enter a valid email and the 6-digit verification OTP code." },
         { status: 400 }
       );
     }

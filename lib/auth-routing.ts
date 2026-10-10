@@ -12,7 +12,9 @@ export function getDashboardUrlForRole(role?: string | null): string {
       return "/dashboard/company";
     case "admin":
       return "/dashboard/admin";
+    case "user":
+      return "/";
     default:
-      return "/login";
+      return "/dashboard";
   }
 }

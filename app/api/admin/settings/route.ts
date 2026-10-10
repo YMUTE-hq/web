@@ -21,9 +21,12 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const { key, value } = body;
     if (!key || value === undefined) return NextResponse.json({ error: "Missing key or value" }, { status: 400 });
-    const result = await AdminService.updateSetting(key, String(value));
+    if (typeof value !== "string") return NextResponse.json({ error: "Value must be a string" }, { status: 400 });
+    const result = await AdminService.updateSetting(key, value);
     return NextResponse.json(result);
   } catch (error: unknown) {
-    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
+    const msg = getErrorMessage(error);
+    const status = msg.includes("Unknown setting") || msg.includes("Invalid setting") ? 400 : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }

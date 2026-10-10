@@ -1,7 +1,12 @@
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import DashboardTabWrapper from "@/components/DashboardTabWrapper";
+import { requireAdminPage } from "@/lib/viewer";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  // Server-side admin gate (load-bearing: admin pages use the service-role
+  // client). One cached getUser + profile query per request.
+  await requireAdminPage();
+
   return (
     <div className="flex h-screen overflow-hidden bg-background-light text-slate-900 font-display">
       {/* Sidebar - Stays 100% interactive & out of loader blur */}

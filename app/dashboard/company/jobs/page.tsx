@@ -43,7 +43,9 @@ export default function CompanyJobsPage() {
   const toggleStatus = async (job: Job) => {
     const newStatus = job.status === "open" ? "closed" : "open";
     try {
-      await supabase.from("jobs").update({ status: newStatus }).eq("id", job.id);
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+      await supabase.from("jobs").update({ status: newStatus }).eq("id", job.id).eq("company_id", authUser.id);
       fetchJobs();
     } catch (err) {
       console.error(err);

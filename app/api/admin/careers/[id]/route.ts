@@ -14,12 +14,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const body = await req.json();
     const adminSupabase = createAdminClient();
 
+    const ALLOWED_CAREER_FIELDS = [
+      "title",
+      "department",
+      "location",
+      "type",
+      "description",
+      "requirements",
+      "salary_range",
+      "apply_email",
+      "apply_url",
+      "status",
+    ] as const;
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    for (const key of ALLOWED_CAREER_FIELDS) {
+      if (body?.[key] !== undefined) updates[key] = body[key];
+    }
+    if (Object.keys(updates).length <= 1) {
+      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    }
+
     const { data, error } = await adminSupabase
       .from("careers")
-      .update({
-        ...body,
-        updated_at: new Date().toISOString()
-      })
+      .update(updates)
       .eq("id", id)
       .select()
       .single();

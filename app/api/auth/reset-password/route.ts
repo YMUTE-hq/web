@@ -1,18 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase-server";
 import { validateResetToken, consumeResetToken } from "@/lib/otp-store";
+import { checkRateLimit } from "@/lib/rate-limiter";
 import { getErrorMessage } from "@/types";
 
 export async function POST(req: NextRequest) {
   try {
+    // Sliding-window rate limit: Max 5 password resets per 15 minutes per IP
+    const rateCheck = await checkRateLimit(req, {
+      prefix: "reset-password",
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+
+    if (!rateCheck.allowed && rateCheck.response) {
+      return rateCheck.response;
+    }
+
     const { email, resetToken, newPassword } = await req.json();
 
     if (!email || !resetToken || !newPassword) {
       return NextResponse.json({ error: "Missing required reset details." }, { status: 400 });
     }
+    if (typeof email !== "string" || !email.includes("@")) {
+      return NextResponse.json({ error: "Invalid email." }, { status: 400 });
+    }
 
-    if (typeof newPassword !== "string" || newPassword.length < 8) {
-      return NextResponse.json({ error: "Password must be at least 8 characters long." }, { status: 400 });
+    if (typeof newPassword !== "string" || newPassword.length < 8 || newPassword.length > 72) {
+      return NextResponse.json({ error: "Password must be 8–72 characters long." }, { status: 400 });
     }
 
     const cleanEmail = email.trim().toLowerCase();

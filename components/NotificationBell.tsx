@@ -23,18 +23,21 @@ export default function NotificationBell() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (signal?: AbortSignal) => {
     if (!user) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/notifications");
+      const res = await fetch("/api/notifications", { signal });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
           setNotifications(data);
         }
       }
-    } catch {
+    } catch (err: unknown) {
+      if ((err as Error)?.name !== "AbortError") {
+        console.error("Error fetching notifications:", err);
+      }
     } finally {
       setLoading(false);
     }
@@ -44,7 +47,8 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!user) return;
 
-    fetchNotifications();
+    const controller = new AbortController();
+    fetchNotifications(controller.signal);
 
     // Subscribe to realtime notification updates for this user
     const channel = supabase
@@ -67,8 +71,8 @@ export default function NotificationBell() {
               prev.map((n) => (n.id === updated.id ? { ...n, ...updated } : n))
             );
           } else if (payload.eventType === "DELETE") {
-            const oldId = payload.old.id;
-            setNotifications((prev) => prev.filter((n) => n.id !== oldId));
+            const oldId = payload.old?.id;
+            if (oldId) setNotifications((prev) => prev.filter((n) => n.id !== oldId));
           }
         }
       )
@@ -77,6 +81,7 @@ export default function NotificationBell() {
       });
 
     return () => {
+      controller.abort();
       channel.unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -151,6 +156,7 @@ export default function NotificationBell() {
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "";
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);

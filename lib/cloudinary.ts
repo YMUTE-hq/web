@@ -1,5 +1,9 @@
 import { v2 as cloudinary } from "cloudinary";
 
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  console.error("[Cloudinary] Missing CLOUDINARY_CLOUD_NAME / API_KEY / API_SECRET — uploads will fail");
+}
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -14,6 +18,7 @@ export async function uploadToCloudinary(
 ): Promise<string> {
   // Sanitize folder to prevent directory traversal
   const sanitizedFolder = folder.replace(/[^a-zA-Z0-9_-]/g, "");
+  if (!sanitizedFolder) throw new Error("Invalid upload folder");
 
   return new Promise((resolve, reject) => {
     cloudinary.uploader
@@ -21,7 +26,8 @@ export async function uploadToCloudinary(
         { folder: `ymute/${sanitizedFolder}`, resource_type: resourceType },
         (error, result) => {
           if (error) reject(error);
-          else resolve(result!.secure_url);
+          else if (!result?.secure_url) reject(new Error("Upload failed: no URL returned"));
+          else resolve(result.secure_url);
         }
       )
       .end(fileBuffer);

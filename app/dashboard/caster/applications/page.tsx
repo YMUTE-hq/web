@@ -1,3 +1,4 @@
+import { getSessionUser } from "@/lib/viewer";
 import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -13,26 +14,25 @@ type Application = {
 export const dynamic = "force-dynamic";
 
 export default async function CasterApplicationsPage() {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
   const supabase = await createClient();
-  
-  let user = null;
-  let rawApps = [];
 
-  try {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-    user = authData.user;
-    if (!user || authError) throw new Error("Auth failed");
-
-    const { data: rApps } = await supabase
+  // Profile (for role gate) + applications in one concurrent window.
+  const [profileRes, appsRes] = await Promise.all([
+    supabase.from("users").select("role").eq("id", user.id).maybeSingle(),
+    supabase
       .from("applications")
       .select("id, status, created_at, message, jobs(id, title, event_date, domain)")
       .eq("caster_id", user.id)
-      .order("created_at", { ascending: false });
-    rawApps = rApps || [];
-  } catch (error) {
-    console.error("Applications fetch error:", error);
-    redirect("/login");
+      .order("created_at", { ascending: false }),
+  ]);
+  const role = (profileRes.data as { role?: string } | null)?.role;
+  if (role !== "caster") {
+    redirect(role === "company" ? "/dashboard/company" : role === "admin" ? "/dashboard/admin" : "/");
   }
+  if (appsRes.error) console.error("Applications fetch error:", appsRes.error);
+  const rawApps = appsRes.data || [];
 
   const applications = (rawApps as unknown as Application[]) || [];
 

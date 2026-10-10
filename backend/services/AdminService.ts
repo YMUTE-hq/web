@@ -20,7 +20,7 @@ export class AdminService {
   }
 
   // ─── USERS ───────────────────────────────────────────
-  static async getUsers(filters?: { role?: string; search?: string }) {
+  static async getUsers(filters?: { role?: string; search?: string; limit?: number; offset?: number }) {
     try {
       return (await AdminRepository.getAllUsers(filters)) || [];
     } catch {
@@ -41,7 +41,24 @@ export class AdminService {
   }
 
   static async updateUser(userId: string, updates: Record<string, unknown>) {
-    return AdminRepository.updateUser(userId, updates);
+    const ALLOWED_PROFILE_FIELDS = [
+      "full_name",
+      "bio",
+      "location",
+      "avatar_url",
+      "company_name",
+      "company_logo_url",
+      "languages",
+      "domains",
+    ] as const;
+    const safe: Record<string, unknown> = {};
+    for (const key of ALLOWED_PROFILE_FIELDS) {
+      if (updates?.[key] !== undefined) safe[key] = updates[key];
+    }
+    if (Object.keys(safe).length === 0) {
+      throw new Error("No permitted fields to update. Role/suspension changes require dedicated actions.");
+    }
+    return AdminRepository.updateUser(userId, safe);
   }
 
   static async deleteUser(userId: string) {
@@ -49,7 +66,7 @@ export class AdminService {
   }
 
   // ─── CASTERS ─────────────────────────────────────────
-  static async getCasters(filters?: { search?: string }) {
+  static async getCasters(filters?: { search?: string; limit?: number; offset?: number }) {
     try {
       return (await AdminRepository.getAllUsers({ role: "caster", ...filters })) || [];
     } catch {
@@ -70,7 +87,7 @@ export class AdminService {
   }
 
   // ─── COMPANIES ───────────────────────────────────────
-  static async getCompanies(filters?: { search?: string }) {
+  static async getCompanies(filters?: { search?: string; limit?: number; offset?: number }) {
     try {
       return (await AdminRepository.getAllUsers({ role: "company", ...filters })) || [];
     } catch {
@@ -87,7 +104,7 @@ export class AdminService {
   }
 
   // ─── JOBS ────────────────────────────────────────────
-  static async getJobs(filters?: { status?: string; search?: string }) {
+  static async getJobs(filters?: { status?: string; search?: string; limit?: number; offset?: number }) {
     try {
       return (await AdminRepository.getAllJobs(filters)) || [];
     } catch {
@@ -112,7 +129,7 @@ export class AdminService {
   }
 
   // ─── APPLICATIONS ────────────────────────────────────
-  static async getApplications(filters?: { status?: string }) {
+  static async getApplications(filters?: { status?: string; limit?: number; offset?: number }) {
     try {
       return (await AdminRepository.getAllApplications(filters)) || [];
     } catch {
@@ -121,6 +138,8 @@ export class AdminService {
   }
 
   static async overrideApplicationStatus(appId: string, status: string) {
+    const ALLOWED = ["pending", "accepted", "rejected", "withdrawn"];
+    if (!ALLOWED.includes(status)) throw new Error("Invalid application status");
     return AdminRepository.updateApplication(appId, { status });
   }
 
@@ -129,7 +148,7 @@ export class AdminService {
   }
 
   // ─── PAYMENTS ────────────────────────────────────────
-  static async getPayments(filters?: { status?: string }) {
+  static async getPayments(filters?: { status?: string; limit?: number; offset?: number }) {
     try {
       return (await AdminRepository.getAllPayments(filters)) || [];
     } catch {
@@ -146,7 +165,7 @@ export class AdminService {
   }
 
   // ─── REPORTS ─────────────────────────────────────────
-  static async getReports(filters?: { status?: string }) {
+  static async getReports(filters?: { status?: string; limit?: number; offset?: number }) {
     try {
       return (await AdminRepository.getAllReports(filters)) || [];
     } catch {
@@ -184,7 +203,11 @@ export class AdminService {
   }
 
   static async updateLeaderboardPoints(leaderboardId: string, points: number) {
-    return AdminRepository.updateLeaderboardPoints(leaderboardId, points);
+    const n = Number(points);
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0 || n > 1000000) {
+      throw new Error("Points must be an integer between 0 and 1000000");
+    }
+    return AdminRepository.updateLeaderboardPoints(leaderboardId, n);
   }
 
   // ─── SETTINGS ────────────────────────────────────────
@@ -197,6 +220,15 @@ export class AdminService {
   }
 
   static async updateSetting(key: string, value: string) {
+    const ALLOWED_KEYS = [
+      "registration_enabled",
+      "commission_percent",
+      "job_posting_limit",
+      "require_job_approval",
+      "maintenance_mode",
+    ];
+    if (!ALLOWED_KEYS.includes(key)) throw new Error("Unknown setting key");
+    if (typeof value !== "string" || value.length > 500) throw new Error("Invalid setting value");
     return AdminRepository.updateSetting(key, value);
   }
 }

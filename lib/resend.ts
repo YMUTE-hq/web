@@ -1,5 +1,14 @@
 import { Resend } from "resend";
 
+function esc(v: unknown): string {
+  return String(v ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function getResend() {
   const apiKey = process.env.RESEND_API_KEY;
 
@@ -36,7 +45,7 @@ export async function sendPasswordResetOtp({
           <h2 style="color:#001F3F;margin-top:0;">Password Reset Request</h2>
           <p style="color:#1F3A5F;font-size:15px;">Use the verification code below to reset your password. This code will expire in 10 minutes.</p>
           <div style="background:#ffffff;padding:20px;border-radius:12px;text-align:center;margin:24px 0;border:1px solid #e2e8f0;">
-            <span style="font-size:32px;font-weight:800;letter-spacing:6px;color:#c8a137;">${otpCode}</span>
+            <span style="font-size:32px;font-weight:800;letter-spacing:6px;color:#c8a137;">${esc(otpCode)}</span>
           </div>
           <p style="color:#64748b;font-size:13px;">If you did not request a password reset, please ignore this email.</p>
           <p style="color:#94a3b8;font-size:12px;margin-top:24px;border-t:1px solid #e2e8f0;padding-top:16px;">© ${new Date().getFullYear()} YMUTE. All rights reserved.</p>
@@ -64,17 +73,17 @@ export async function sendOAuthAccountNotification({
     await getResend().emails.send({
       from: EMAIL_SENDERS.AUTH,
       to: email,
-      subject: `Security Notice: Sign in to YMUTE with ${provider} 🔐`,
+      subject: `Security Notice: Sign in to YMUTE with ${esc(provider)} 🔐`,
       html: `
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fdfcf0;padding:40px;border-radius:16px;border:1px solid rgba(200,161,55,0.2);">
           <h2 style="color:#001F3F;margin-top:0;">Sign-In Notice</h2>
-          <p style="color:#1F3A5F;font-size:15px;">Hi ${name || "there"},</p>
+          <p style="color:#1F3A5F;font-size:15px;">Hi ${esc(name || "there")},</p>
           <p style="color:#1F3A5F;font-size:15px;">We received a login or password reset request for your YMUTE account.</p>
-          <p style="color:#1F3A5F;font-size:15px;">Your account is registered using <strong>${provider} Sign-In</strong>, which means you do not have a password and can log in with 1 click.</p>
+          <p style="color:#1F3A5F;font-size:15px;">Your account is registered using <strong>${esc(provider)} Sign-In</strong>, which means you do not have a password and can log in with 1 click.</p>
           <div style="text-align:center;margin:28px 0;">
             <a href="${appUrl}/login" 
                style="display:inline-block;background:#001F3F;color:#ffffff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:15px;box-shadow:0 4px 12px rgba(0,31,63,0.15);">
-              Continue with ${provider}
+              Continue with ${esc(provider)}
             </a>
           </div>
           <p style="color:#64748b;font-size:13px;line-height:1.5;">If you did not initiate this request, your account remains secure and no action is required.</p>
@@ -108,8 +117,8 @@ export async function sendWelcomeEmail({
       subject: "Welcome to YMUTE! 🎙️ Your Voice Deserves a Stage",
       html: `
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fdfcf0;padding:40px;border-radius:16px;">
-          <h1 style="color:#001F3F;margin-top:0;">Welcome to YMUTE, ${name}! 🎙️</h1>
-          <p style="color:#1F3A5F;font-size:16px;">Your account as a <strong>${role}</strong> has been created successfully.</p>
+          <h1 style="color:#001F3F;margin-top:0;">Welcome to YMUTE, ${esc(name)}! 🎙️</h1>
+          <p style="color:#1F3A5F;font-size:16px;">Your account as a <strong>${esc(role)}</strong> has been created successfully.</p>
           <p style="color:#1F3A5F;">We're excited to have you on board.</p>
           <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://ymute.com"}${targetUrl}" 
              style="display:inline-block;background:#c8a137;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px;">
@@ -141,11 +150,11 @@ export async function sendApplicationSubmitted({
     await getResend().emails.send({
       from: EMAIL_SENDERS.NOTIFICATIONS,
       to: casterEmail,
-      subject: `Application Submitted – ${jobTitle}`,
+      subject: `Application Submitted – ${esc(jobTitle)}`,
       html: `
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fdfcf0;padding:40px;border-radius:16px;">
-          <h1 style="color:#001F3F;margin-top:0;">Hi ${casterName}! 🎙️</h1>
-          <p style="color:#1F3A5F;font-size:16px;">Your application for <strong>${jobTitle}</strong> at <strong>${companyName}</strong> has been submitted successfully.</p>
+          <h1 style="color:#001F3F;margin-top:0;">Hi ${esc(casterName)}! 🎙️</h1>
+          <p style="color:#1F3A5F;font-size:16px;">Your application for <strong>${esc(jobTitle)}</strong> at <strong>${esc(companyName)}</strong> has been submitted successfully.</p>
           <p style="color:#1F3A5F;">We'll notify you as soon as the company reviews your application.</p>
           <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://ymute.com"}/dashboard/caster/applications" 
              style="display:inline-block;background:#c8a137;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px;">
@@ -177,11 +186,11 @@ export async function sendCasterHired({
     await getResend().emails.send({
       from: EMAIL_SENDERS.NOTIFICATIONS,
       to: casterEmail,
-      subject: `🎉 You've been hired for ${jobTitle}!`,
+      subject: `🎉 You've been hired for ${esc(jobTitle)}!`,
       html: `
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fdfcf0;padding:40px;border-radius:16px;">
-          <h1 style="color:#c8a137;margin-top:0;">Congratulations, ${casterName}! 🎙️</h1>
-          <p style="color:#1F3A5F;font-size:16px;">You've been selected for <strong>${jobTitle}</strong> by <strong>${companyName}</strong>.</p>
+          <h1 style="color:#c8a137;margin-top:0;">Congratulations, ${esc(casterName)}! 🎙️</h1>
+          <p style="color:#1F3A5F;font-size:16px;">You've been selected for <strong>${esc(jobTitle)}</strong> by <strong>${esc(companyName)}</strong>.</p>
           <p style="color:#1F3A5F;">The company will reach out to you with further details about the event.</p>
           <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://ymute.com"}/dashboard/caster/applications" 
              style="display:inline-block;background:#c8a137;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px;">
@@ -211,11 +220,11 @@ export async function sendApplicationDeclined({
     await getResend().emails.send({
       from: EMAIL_SENDERS.NOTIFICATIONS,
       to: casterEmail,
-      subject: `Update on your application for ${jobTitle}`,
+      subject: `Update on your application for ${esc(jobTitle)}`,
       html: `
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fdfcf0;padding:40px;border-radius:16px;">
-          <h2 style="color:#001F3F;margin-top:0;">Hi ${casterName},</h2>
-          <p style="color:#1F3A5F;font-size:15px;">Thank you for applying for <strong>${jobTitle}</strong>. The company has reviewed applications and moved forward with another candidate for this opportunity.</p>
+          <h2 style="color:#001F3F;margin-top:0;">Hi ${esc(casterName)},</h2>
+          <p style="color:#1F3A5F;font-size:15px;">Thank you for applying for <strong>${esc(jobTitle)}</strong>. The company has reviewed applications and moved forward with another candidate for this opportunity.</p>
           <p style="color:#1F3A5F;">Don't get discouraged! New casting opportunities are posted regularly.</p>
           <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://ymute.com"}/jobs" 
              style="display:inline-block;background:#001F3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px;">
@@ -246,7 +255,7 @@ export async function sendVerificationApproved({
       subject: "Your company is now verified on YMUTE ✅",
       html: `
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fdfcf0;padding:40px;border-radius:16px;">
-          <h1 style="color:#001F3F;margin-top:0;">Great news, ${companyName}! ✅</h1>
+          <h1 style="color:#001F3F;margin-top:0;">Great news, ${esc(companyName)}! ✅</h1>
           <p style="color:#1F3A5F;font-size:16px;">Your company profile has been verified on YMUTE. You can now post jobs and hire top casting talent.</p>
           <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://ymute.com"}/dashboard/company" 
              style="display:inline-block;background:#c8a137;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px;">
@@ -280,14 +289,14 @@ export async function sendPaymentReceipt({
     await getResend().emails.send({
       from: EMAIL_SENDERS.BILLING,
       to: email,
-      subject: `Payment Receipt: ${amount} for ${jobTitle} 💳`,
+      subject: `Payment Receipt: ${esc(amount)} for ${esc(jobTitle)} 💳`,
       html: `
         <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fdfcf0;padding:40px;border-radius:16px;">
           <h2 style="color:#001F3F;margin-top:0;">Payment Receipt</h2>
-          <p style="color:#1F3A5F;font-size:15px;">Hi ${name}, your payment for <strong>${jobTitle}</strong> has been processed successfully.</p>
+          <p style="color:#1F3A5F;font-size:15px;">Hi ${esc(name)}, your payment for <strong>${esc(jobTitle)}</strong> has been processed successfully.</p>
           <div style="background:#ffffff;padding:20px;border-radius:12px;margin:20px 0;border:1px solid #e2e8f0;">
-            <p style="margin:4px 0;color:#64748b;font-size:13px;">Amount: <strong style="color:#001F3F;font-size:16px;">${amount}</strong></p>
-            <p style="margin:4px 0;color:#64748b;font-size:13px;">Transaction ID: <code style="color:#c8a137;">${transactionId}</code></p>
+            <p style="margin:4px 0;color:#64748b;font-size:13px;">Amount: <strong style="color:#001F3F;font-size:16px;">${esc(amount)}</strong></p>
+            <p style="margin:4px 0;color:#64748b;font-size:13px;">Transaction ID: <code style="color:#c8a137;">${esc(transactionId)}</code></p>
           </div>
           <p style="color:#94a3b8;font-size:12px;margin-top:24px;">© ${new Date().getFullYear()} YMUTE. All rights reserved.</p>
         </div>

@@ -14,6 +14,9 @@ interface RawConv {
   created_at: string;
   conversation_members: RawMember[];
   messages?: ChatMessage[];
+  // Precomputed by ChatRepository (bounded unread query). Falls back to
+  // computing from messages when absent (e.g. older shapes).
+  __unreadCount?: number;
 }
 
 export class ChatService {
@@ -27,13 +30,17 @@ export class ChatService {
 
       const otherUser = others.length > 0 ? others[0] : null;
 
-      const lastMessage = conv.messages && conv.messages.length > 0 
-        ? conv.messages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+      // Repository returns at most the latest message (bounded query) —
+      // no in-place sort needed.
+      const lastMessage = conv.messages && conv.messages.length > 0
+        ? conv.messages[0]
         : null;
 
-      const unreadCount = conv.messages
-        ? conv.messages.filter((m) => !m.seen && m.sender_id !== userId).length
-        : 0;
+      const unreadCount = typeof conv.__unreadCount === "number"
+        ? conv.__unreadCount
+        : conv.messages
+          ? conv.messages.filter((m) => !m.seen && m.sender_id !== userId).length
+          : 0;
 
       return {
         id: conv.id,
@@ -44,6 +51,23 @@ export class ChatService {
         unreadCount
       };
     });
+  }
+
+  static async getUnreadCount(userId: string): Promise<number> {
+    const supabase = createAdminClient();
+    const { data: members } = await supabase
+      .from("conversation_members")
+      .select("conversation_id")
+      .eq("user_id", userId);
+    if (!members || members.length === 0) return 0;
+    const ids = members.map((m) => m.conversation_id);
+    const { count } = await supabase
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .in("conversation_id", ids)
+      .eq("seen", false)
+      .neq("sender_id", userId);
+    return count || 0;
   }
 
   static async getOrCreateDirectConversation(currentUserId: string, targetUserId: string) {
@@ -62,8 +86,18 @@ export class ChatService {
   }
 
   static async sendMessage(conversationId: string, senderId: string, text: string, mediaUrl?: string) {
-    if (!text && !mediaUrl) {
+    const cleanText = typeof text === "string" ? text.trim() : "";
+    const cleanMedia = typeof mediaUrl === "string" ? mediaUrl.trim() : undefined;
+    if (!cleanText && !cleanMedia) {
       throw new Error("Message cannot be empty");
+    }
+    if (cleanText && cleanText.length > 5000) {
+      throw new Error("Message too long (max 5000 characters)");
+    }
+    if (cleanMedia) {
+      if (cleanMedia.length > 2048 || (!cleanMedia.startsWith("https://"))) {
+        throw new Error("Invalid attachment URL");
+      }
     }
 
     const supabase = createAdminClient();
@@ -78,7 +112,7 @@ export class ChatService {
       throw new Error("Not authorized to send message to this conversation");
     }
 
-    return await ChatRepository.createMessage(conversationId, senderId, text, mediaUrl);
+    return await ChatRepository.createMessage(conversationId, senderId, cleanText, cleanMedia);
   }
 
   static async getMessages(conversationId: string, userId: string) {
@@ -98,10 +132,21 @@ export class ChatService {
   }
 
   static async createConversation(type: string, userIds: string[], jobId?: string) {
-    if (userIds.length < 2) {
-      throw new Error("Cannot create a conversation with less than 2 users");
+    const ALLOWED_TYPES = ["direct", "job", "support"];
+    if (!ALLOWED_TYPES.includes(type)) {
+      throw new Error("Invalid conversation type");
     }
-    return await ChatRepository.createConversation(type, userIds, jobId);
+    if (!Array.isArray(userIds) || userIds.length < 2 || userIds.length > 10) {
+      throw new Error("Conversation must have 2–10 users");
+    }
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    for (const id of userIds) {
+      if (!UUID.test(id)) throw new Error("Invalid user id");
+    }
+    if (new Set(userIds).size !== userIds.length) throw new Error("Duplicate users");
+    const cleanJobId = jobId ?? undefined;
+    if (cleanJobId !== undefined && !UUID.test(cleanJobId)) throw new Error("Invalid job id");
+    return await ChatRepository.createConversation(type, userIds, cleanJobId);
   }
 
   static async markAsRead(conversationId: string, userId: string) {

@@ -22,6 +22,9 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const { id, status } = body;
     if (!id || !status) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    if (!["paid", "refunded"].includes(status)) {
+      return NextResponse.json({ error: "Invalid status. Must be 'paid' or 'refunded'." }, { status: 400 });
+    }
     const result = status === "paid"
       ? await AdminService.markPaymentPaid(id)
       : await AdminService.refundPayment(id);

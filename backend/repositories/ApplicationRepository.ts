@@ -32,12 +32,16 @@ export class ApplicationRepository {
 
   static async checkExistingApplication(jobId: string, casterId: string) {
     const supabase = await createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("applications")
       .select("id")
       .eq("job_id", jobId)
       .eq("caster_id", casterId)
-      .single();
+      .maybeSingle();
+    if (error) {
+      console.error("[ApplicationRepository checkExisting Error]:", error.message);
+      throw new Error(error.message);
+    }
     return !!data;
   }
 

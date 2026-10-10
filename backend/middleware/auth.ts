@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase-server";
 import type { User } from "@supabase/supabase-js";
+import type { UserRole } from "@/types";
 
 export interface AuthenticatedProfile {
   id: string;
-  role: string;
+  role: UserRole;
   email?: string;
   full_name?: string;
   is_suspended?: boolean;
@@ -34,9 +35,13 @@ export async function authenticate(_req?: Request): Promise<AuthenticatedProfile
     throw new Error("Profile not found");
   }
 
+  if (profile.is_suspended || profile.is_banned) {
+    throw new Error("Account suspended");
+  }
+
   return {
     id: user.id,
-    role: profile.role || "user",
+    role: (profile.role || "user") as UserRole,
     email: user.email,
     full_name: profile.full_name,
     is_suspended: profile.is_suspended,

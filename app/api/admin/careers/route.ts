@@ -10,13 +10,17 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
     const supabase = await createClient();
-    const { data, error } = await supabase
+    // Admin GET must bypass RLS consistently (requireAdmin already passed) — use admin client.
+    void supabase;
+    const adminSupabase = createAdminClient();
+    const { data, error } = await adminSupabase
       .from("careers")
       .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
-      return NextResponse.json([]);
+      console.error("[Admin careers GET]:", error.message);
+      return NextResponse.json({ error: "Failed to fetch careers" }, { status: 500 });
     }
 
     return NextResponse.json(data || []);
@@ -27,7 +31,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const rateCheck = checkRateLimit(req, {
+    const rateCheck = await checkRateLimit(req, {
       prefix: "admin_careers",
       limit: 30,
       windowMs: 60 * 1000,

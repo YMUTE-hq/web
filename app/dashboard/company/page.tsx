@@ -1,3 +1,4 @@
+import { getSessionUser } from "@/lib/viewer";
 import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -7,42 +8,37 @@ import { Job, Application } from "@/types";
 export const dynamic = "force-dynamic";
 
 export default async function CompanyDashboardPage() {
+  // Single-window fetch: free session id + 3 concurrent queries, role checked after.
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
   const supabase = await createClient();
-  
-  let user = null;
-  let profile = null;
-  let recentJobs: Partial<Job>[] = [];
-  let apps: Partial<Application>[] = [];
 
-  try {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-    user = authData.user;
-    if (!user || authError) throw new Error("Auth failed");
-
-    const { data: p } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-    profile = p;
-
-    const { data: jobs } = await supabase
+  const [profileRes, jobsRes, appsRes] = await Promise.all([
+    supabase.from("users").select("*").eq("id", user.id).maybeSingle(),
+    supabase
       .from("jobs")
       .select("id, title, status, created_at, domain")
       .eq("company_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(5);
-    recentJobs = jobs || [];
-
-    const { data: a } = await supabase
+      .limit(5),
+    supabase
       .from("applications")
       .select("id, status, jobs!inner(company_id)")
-      .eq("jobs.company_id", user.id);
-    apps = (a || []) as unknown as Partial<Application>[];
-  } catch (error) {
-    console.error("Dashboard fetch error:", error);
-    redirect("/login");
+      .eq("jobs.company_id", user.id),
+  ]);
+
+  const profile = profileRes.data;
+  const role = (profile as { role?: string } | null)?.role;
+  if (role !== "company") {
+    redirect(role === "caster" ? "/dashboard/caster" : role === "admin" ? "/dashboard/admin" : "/");
   }
+
+  if (jobsRes.error || appsRes.error) {
+    console.error("Dashboard fetch error:", jobsRes.error || appsRes.error);
+  }
+
+  const recentJobs: Partial<Job>[] = jobsRes.data || [];
+  const apps = (appsRes.data || []) as unknown as Partial<Application>[];
 
   const stats = {
     jobs: recentJobs.length,
